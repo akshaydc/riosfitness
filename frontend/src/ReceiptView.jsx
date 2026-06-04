@@ -1,7 +1,5 @@
+import { useEffect } from 'react';
 import { fmtDate, fmtCurrency } from './components';
-
-// receipt shape:
-// { id, member_name, membership_id, amount, method, paid_date, recorded_by, new_due_date, note }
 
 function GymLogo() {
   return (
@@ -44,7 +42,14 @@ function Row({ label, value, large }) {
   );
 }
 
-export default function ReceiptView({ receipt, onClose }) {
+export default function ReceiptView({ receipt, onClose, autoPrint = false }) {
+  useEffect(() => {
+    if (autoPrint) {
+      const t = setTimeout(() => window.print(), 350);
+      return () => clearTimeout(t);
+    }
+  }, [autoPrint]);
+
   const rows = [
     { label: 'Receipt No.', value: receipt.id },
     { label: 'Member', value: receipt.member_name },
@@ -54,11 +59,10 @@ export default function ReceiptView({ receipt, onClose }) {
     { label: 'Date', value: fmtDate(receipt.paid_date) },
     ...(receipt.new_due_date ? [{ label: 'New Due Date', value: fmtDate(receipt.new_due_date) }] : []),
     { label: 'Recorded By', value: receipt.recorded_by },
-    ...(receipt.note ? [{ label: 'Note', value: receipt.note }] : []),
+    ...(receipt.note && receipt.note !== 'Initial payment' ? [{ label: 'Note', value: receipt.note }] : []),
   ];
 
   return (
-    /* overlay */
     <div style={{
       position: 'fixed', inset: 0,
       background: 'rgba(15,31,61,0.55)',
@@ -67,7 +71,6 @@ export default function ReceiptView({ receipt, onClose }) {
       zIndex: 1100,
       padding: 16,
     }}>
-      {/* rf-receipt: this div is what @media print shows */}
       <div className="rf-receipt" style={{
         background: '#ffffff',
         borderRadius: 14,
@@ -110,7 +113,7 @@ export default function ReceiptView({ receipt, onClose }) {
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#15803d" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="20 6 9 17 4 12"/>
             </svg>
-            <span style={{ fontSize: 13, fontWeight: 700, color: '#15803d' }}>Payment recorded successfully</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#15803d' }}>Receipt Generated</span>
           </div>
 
           {/* Receipt rows */}
@@ -147,7 +150,24 @@ export default function ReceiptView({ receipt, onClose }) {
                 fontFamily: 'inherit',
               }}
             >
-              Print / Save as PDF
+              Print Receipt
+            </button>
+            <button
+              onClick={() => window.print()}
+              style={{
+                flex: 1,
+                padding: '10px 0',
+                background: '#f0fdf4',
+                color: '#15803d',
+                border: '1px solid #bbf7d0',
+                borderRadius: 8,
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+              }}
+            >
+              Download PDF
             </button>
             <button
               onClick={onClose}

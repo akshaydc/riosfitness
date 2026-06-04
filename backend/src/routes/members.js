@@ -5,6 +5,16 @@ const { authenticate, requireSuperAdmin } = require('../auth');
 const router = express.Router();
 router.use(authenticate);
 
+const SUB_MAP = { monthly: 30, quarterly: 90, '6_months': 180, yearly: 365, annual: 365 };
+
+function generateMembershipId(joinDate) {
+  const d = new Date(joinDate || Date.now());
+  const yyyymm = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}`;
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  const rand = Array.from({ length: 3 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+  return `RIOSFIT-${yyyymm}-${rand}`;
+}
+
 router.get('/stats/summary', async (req, res) => {
   try {
     const { rows: counts } = await pool.query(`
@@ -36,7 +46,7 @@ router.get('/stats/summary', async (req, res) => {
 });
 
 router.get('/', async (req, res) => {
-  const { search, status, due_filter, subscription_type } = req.query;
+  const { search, status, due_filter, subscription_type, timing } = req.query;
   try {
     let where = [];
     let params = [];
@@ -71,6 +81,12 @@ router.get('/', async (req, res) => {
     if (subscription_type && subscription_type !== 'all') {
       where.push(`m.subscription_type = $${idx}`);
       params.push(subscription_type);
+      idx++;
+    }
+
+    if (timing && timing !== 'all') {
+      where.push(`m.timing = $${idx}`);
+      params.push(timing);
       idx++;
     }
 
@@ -127,38 +143,6 @@ router.patch('/:id/photo', async (req, res) => {
   }
 });
 
-router.post('/', async (req, res) => {
-  const { name, phone, email, subscription_type, due_date, join_date, joined_date, notes, photo } = req.body;
-  if (!name || !subscription_type) {
-    return res.status(400).json({ error: 'name and subscription_type are required' });
-  }
-
-  const today = new Date().toISOString().split('T')[0];
-  const joinDate = join_date || joined_date || today;
-
-  let dueDate = due_date;
-  if (!dueDate) {
-    const subMap = { monthly: 30, quarterly: 90, yearly: 365 };
-    const days = subMap[subscription_type] || 30;
-    const d = new Date(joinDate);
-    d.setDate(d.getDate() + days);
-    dueDate = d.toISOString().split('T')[0];
-  }
-
-  try {
-    const { rows } = await pool.query(
-      `INSERT INTO members (name, phone, email, subscription_type, due_date, joined_date, notes, photo)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-       RETURNING *`,
-      [name, phone || null, email || null, subscription_type, dueDate, joinDate, notes || null, photo || null]
-    );
-    res.status(201).json(rows[0]);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
 router.patch('/:id/cancel', requireSuperAdmin, async (req, res) => {
   try {
     const { rows } = await pool.query(
@@ -170,6 +154,170 @@ router.patch('/:id/cancel', requireSuperAdmin, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });
+  }
+});
+
+router.patch('/:id', async (req, res) => {
+  const fieldMap = {
+    name: 'name',
+    phone: 'phone',
+    email: 'email',
+    subscription_type: 'subscription_type',
+    timing: 'timing',
+    join_date: 'joined_date',
+    due_date: 'due_date',
+    subscription_fee: 'subscription_fee',
+    status: 'status',
+    notes: 'notes',
+  };
+
+  const updates = [];
+  const params = [];
+  let idx = 1;
+
+  for (const [reqField, dbField] of Object.entries(fieldMap)) {
+    if (req.body[reqField] !== undefined) {
+      updates.push(`${dbField} = $${idx++}`);
+      params.push(req.body[reqField] === '' ? null : req.body[reqField]);
+    }
+  }
+
+  if (!updates.length) return res.status(400).json({ error: 'No fields to update' });
+
+  updates.push(`updated_at = NOW()`);
+  params.push(req.params.id);
+
+  try {
+    const { rows } = await pool.query(
+      `UPDATE members SET ${updates.join(', ')} WHERE id = $${idx} RETURNING *`,
+      params
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Member not found' });
+    res.json(rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+router.post('/', async (req, res) => {
+  const {
+    name, phone, email, subscription_type,
+    due_date, join_date, joined_date, notes, photo,
+    timing, subscription_fee, amount_paid, payment_method,
+  } = req.body;
+
+  if (!name || !subscription_type) {
+    return res.status(400).json({ error: 'name and subscription_type are required' });
+  }
+
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+  const joinDate = join_date || joined_date || todayStr;
+
+  let dueDate = due_date;
+  if (!dueDate) {
+    const days = SUB_MAP[subscription_type] || 30;
+    const d = new Date(joinDate);
+    d.setDate(d.getDate() + days);
+    dueDate = d.toISOString().split('T')[0];
+  }
+
+  const paidAmount = parseFloat(amount_paid) || 0;
+  const useTransaction = paidAmount > 0;
+
+  if (!useTransaction) {
+    // Simple insert without payment
+    try {
+      let membershipId;
+      let attempts = 0;
+      do {
+        membershipId = generateMembershipId(joinDate);
+        const { rows: exists } = await pool.query(
+          `SELECT id FROM members WHERE membership_id = $1`, [membershipId]
+        );
+        if (!exists.length) break;
+        attempts++;
+      } while (attempts < 20);
+
+      const { rows } = await pool.query(
+        `INSERT INTO members (name, phone, email, subscription_type, due_date, joined_date,
+                              notes, photo, timing, subscription_fee, membership_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+         RETURNING *`,
+        [name, phone || null, email || null, subscription_type, dueDate, joinDate,
+         notes || null, photo || null, timing || null, subscription_fee || null, membershipId]
+      );
+      return res.status(201).json(rows[0]);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Server error' });
+    }
+  }
+
+  // Insert member + payment + receipt in a single transaction
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    let membershipId;
+    let attempts = 0;
+    do {
+      membershipId = generateMembershipId(joinDate);
+      const { rows: exists } = await client.query(
+        `SELECT id FROM members WHERE membership_id = $1`, [membershipId]
+      );
+      if (!exists.length) break;
+      attempts++;
+    } while (attempts < 20);
+
+    const { rows: [member] } = await client.query(
+      `INSERT INTO members (name, phone, email, subscription_type, due_date, joined_date,
+                            notes, photo, timing, subscription_fee, membership_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+       RETURNING *`,
+      [name, phone || null, email || null, subscription_type, dueDate, joinDate,
+       notes || null, photo || null, timing || null, subscription_fee || null, membershipId]
+    );
+
+    const { rows: [payment] } = await client.query(
+      `INSERT INTO payments (member_id, amount, payment_method, note, recorded_by)
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [member.id, paidAmount, payment_method || 'Cash', 'Initial payment', req.user.id]
+    );
+
+    const pad = (n) => String(n).padStart(2, '0');
+    const datePart = `${today.getFullYear()}${pad(today.getMonth() + 1)}${pad(today.getDate())}`;
+    const receiptId = `RCT-${datePart}-${String(payment.id).padStart(4, '0')}`;
+
+    const { rows: [receiptUser] } = await client.query(
+      `SELECT name FROM users WHERE id = $1`, [req.user.id]
+    );
+    const recordedBy = receiptUser?.name || 'Staff';
+
+    await client.query(
+      `INSERT INTO receipts (id, payment_id, member_id, member_name, membership_id,
+                             amount, method, paid_date, recorded_by, new_due_date, note, receipt_data)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+       ON CONFLICT (id) DO NOTHING`,
+      [receiptId, payment.id, member.id, member.name, membershipId,
+       paidAmount, payment_method || 'Cash', todayStr, recordedBy, dueDate, 'Initial payment',
+       JSON.stringify({ receiptId, memberName: member.name, membershipId, amount: paidAmount })]
+    );
+
+    await client.query('COMMIT');
+    res.status(201).json({
+      ...member,
+      receipt_id: receiptId,
+      recorded_by: recordedBy,
+      new_due_date: dueDate,
+    });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  } finally {
+    client.release();
   }
 });
 

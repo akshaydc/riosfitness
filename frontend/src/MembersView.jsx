@@ -34,6 +34,7 @@ export default function MembersView({ user }) {
   const [search, setSearch] = useState('');
   const [filterSub, setFilterSub] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  const [filterTiming, setFilterTiming] = useState('');
   const [showAdd, setShowAdd] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
@@ -48,6 +49,7 @@ export default function MembersView({ user }) {
       const params = {
         search: search || undefined,
         subscription_type: filterSub || undefined,
+        timing: filterTiming || undefined,
       };
       if (filterStatus === 'overdue') {
         params.due_filter = 'overdue';
@@ -64,7 +66,7 @@ export default function MembersView({ user }) {
     } finally {
       setLoading(false);
     }
-  }, [search, filterSub, filterStatus]);
+  }, [search, filterSub, filterStatus, filterTiming]);
 
   useEffect(() => {
     const t = setTimeout(load, search ? 300 : 0);
@@ -125,7 +127,7 @@ export default function MembersView({ user }) {
   }
 
   function downloadTemplate() {
-    const csv = 'name,phone,email,subscription_type,join_date,due_date,notes\nArjun Mehta,9876543210,arjun@example.com,monthly,2025-06-01,2025-07-01,\n';
+    const csv = 'name,phone,email,subscription_type,timing,join_date,due_date,notes\nArjun Mehta,9876543210,arjun@example.com,monthly,6AM,2025-06-01,2025-07-01,\n';
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = 'members-template.csv'; a.click();
@@ -319,8 +321,9 @@ export default function MembersView({ user }) {
         >
           <option value="">All Types</option>
           <option value="monthly">Monthly</option>
-          <option value="quarterly">Quarterly</option>
-          <option value="yearly">Yearly</option>
+          <option value="quarterly">3 Months</option>
+          <option value="6_months">6 Months</option>
+          <option value="yearly">Annual</option>
         </select>
 
         <select
@@ -333,6 +336,17 @@ export default function MembersView({ user }) {
           <option value="overdue">Overdue</option>
           <option value="due_soon">Due Soon</option>
           <option value="cancelled">Cancelled</option>
+        </select>
+
+        <select
+          value={filterTiming}
+          onChange={e => setFilterTiming(e.target.value)}
+          style={dropdownStyle(!!filterTiming)}
+        >
+          <option value="">All Timings</option>
+          {['5AM','6AM','7AM','8AM','9AM','10AM','11AM','12PM','1PM','2PM','3PM','4PM','5PM','6PM','7PM','8PM','9PM','10PM'].map(t => (
+            <option key={t} value={t}>{t}</option>
+          ))}
         </select>
 
         <Btn variant="ghost" size="sm" onClick={load} style={{ height: '40px', whiteSpace: 'nowrap', flexShrink: 0 }}>
@@ -418,7 +432,7 @@ export default function MembersView({ user }) {
       {showAdd && (
         <AddMemberModal
           onClose={() => setShowAdd(false)}
-          onAdded={() => { setShowAdd(false); load(); }}
+          onAdded={() => load()}
         />
       )}
 

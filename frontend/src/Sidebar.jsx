@@ -1,8 +1,9 @@
 import { Icon, Avatar } from './components';
 
 const navItems = [
-  { id: 'members', label: 'Members', icon: 'users', roles: ['admin', 'super_admin'] },
-  { id: 'reports', label: 'Revenue Reports', icon: 'trending', roles: ['super_admin'] },
+  { id: 'members',  label: 'Members',         icon: 'users',   roles: ['admin', 'super_admin'] },
+  { id: 'receipts', label: 'Receipts',         icon: 'receipt', roles: ['admin', 'super_admin'] },
+  { id: 'reports',  label: 'Revenue Reports',  icon: 'trending', roles: ['super_admin'] },
 ];
 
 export default function Sidebar({ user, activeView, onNavigate, onLogout }) {

@@ -4,9 +4,11 @@ import { Modal, ModalActions, Btn, Field, Input, Select, Badge, fmtDate, fmtCurr
 import ReceiptView from './ReceiptView';
 
 const AMOUNTS = {
-  monthly: 1200,
-  quarterly: 3200,
-  yearly: 11000,
+  monthly: 1000,
+  quarterly: 2700,
+  '6_months': 5000,
+  yearly: 9000,
+  annual: 9000,
 };
 
 export default function PaymentModal({ member, user, onClose, onPaid }) {
@@ -92,7 +94,7 @@ export default function PaymentModal({ member, user, onClose, onPaid }) {
                 autoFocus
               />
               <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
-                {[1200, 3200, 11000].map(amt => (
+                {[1000, 1500, 3000, 7777].map(amt => (
                   <button
                     key={amt}
                     type="button"

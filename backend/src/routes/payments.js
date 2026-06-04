@@ -31,7 +31,7 @@ router.post('/', async (req, res) => {
       [member_id, amount, payment_method || 'Cash', note || null, req.user.id]
     );
 
-    const subMap = { monthly: 30, quarterly: 90, yearly: 365 };
+    const subMap = { monthly: 30, quarterly: 90, '6_months': 180, yearly: 365, annual: 365 };
     const days = subMap[member.subscription_type] || 30;
 
     const base = member.due_date && new Date(member.due_date) > new Date()
@@ -49,7 +49,7 @@ router.post('/', async (req, res) => {
     const pad = (n) => String(n).padStart(2, '0');
     const datePart = `${today.getFullYear()}${pad(today.getMonth() + 1)}${pad(today.getDate())}`;
     const receiptId = `RCT-${datePart}-${String(payment.id).padStart(4, '0')}`;
-    const membershipId = `#${String(member_id).padStart(4, '0')}`;
+    const membershipId = member.membership_id || `#${String(member_id).padStart(4, '0')}`;
 
     const { rows: [receiptUser] } = await client.query('SELECT name FROM users WHERE id = $1', [req.user.id]);
     const recordedBy = receiptUser?.name || 'Staff';

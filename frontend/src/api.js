@@ -63,4 +63,14 @@ export const api = {
 
   getMemberReceipts: (memberId) => request(`/api/receipts/member/${memberId}`),
   getReceipt: (receiptId) => request(`/api/receipts/${encodeURIComponent(receiptId)}`),
+
+  getReceipts: (params = {}) => {
+    const q = new URLSearchParams(
+      Object.fromEntries(Object.entries(params).filter(([, v]) => v != null && v !== ''))
+    ).toString();
+    return request(`/api/receipts${q ? `?${q}` : ''}`);
+  },
+
+  updateMember: (id, data) =>
+    request(`/api/members/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
 };

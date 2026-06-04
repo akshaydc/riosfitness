@@ -1,8 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from './api';
 import { Modal, ModalActions, Btn, Field, Input, Select, useToast } from './components';
+import ReceiptView from './ReceiptView';
 
-const SUB_DAYS = { monthly: 30, quarterly: 90, yearly: 365 };
+const SUB_DAYS = { monthly: 30, quarterly: 90, '6_months': 180, yearly: 365 };
+const DEFAULT_FEES = { monthly: 1000, quarterly: 2700, '6_months': 5000, yearly: 9000 };
+
+const TIMINGS = [
+  '5AM','6AM','7AM','8AM','9AM','10AM','11AM','12PM',
+  '1PM','2PM','3PM','4PM','5PM','6PM','7PM','8PM','9PM','10PM',
+];
 
 const todayStr = () => new Date().toISOString().split('T')[0];
 
@@ -19,6 +26,7 @@ export default function AddMemberModal({ onClose, onAdded }) {
   const [loading, setLoading] = useState(false);
   const [phoneError, setPhoneError] = useState('');
   const [photo, setPhoto] = useState('');
+  const [receipt, setReceipt] = useState(null);
   const fileRef = useRef();
 
   function handlePhotoFile(e) {
@@ -31,23 +39,34 @@ export default function AddMemberModal({ onClose, onAdded }) {
 
   const [form, setForm] = useState(() => {
     const today = todayStr();
+    const sub = 'monthly';
     return {
       name: '',
       phone: '',
       email: '',
-      subscription_type: 'monthly',
+      subscription_type: sub,
       join_date: today,
-      due_date: calcDueDate(today, 'monthly'),
+      due_date: calcDueDate(today, sub),
       notes: '',
+      timing: '',
+      subscription_fee: String(DEFAULT_FEES[sub]),
+      amount_paid: String(DEFAULT_FEES[sub]),
+      payment_method: 'Cash',
     };
   });
 
-  // Auto-recalculate due_date when join_date or subscription_type changes
   const { join_date, subscription_type } = form;
+
   useEffect(() => {
     const calculated = calcDueDate(join_date, subscription_type);
+    const defaultFee = DEFAULT_FEES[subscription_type] || 1000;
     if (calculated) {
-      setForm(prev => ({ ...prev, due_date: calculated }));
+      setForm(prev => ({
+        ...prev,
+        due_date: calculated,
+        subscription_fee: String(defaultFee),
+        amount_paid: String(defaultFee),
+      }));
     }
   }, [join_date, subscription_type]);
 
@@ -59,17 +78,37 @@ export default function AddMemberModal({ onClose, onAdded }) {
   async function handleSubmit(e) {
     e.preventDefault();
     if (!form.name.trim()) return toast('Name is required', 'error');
-    if (!form.phone.trim()) {
-      setPhoneError('Phone number is required');
-      return;
-    }
+    if (!form.phone.trim()) { setPhoneError('Phone number is required'); return; }
     if (!form.due_date) return toast('Due date is required', 'error');
 
     setLoading(true);
     try {
-      await api.addMember({ ...form, photo: photo || undefined });
-      toast('Member added successfully');
-      onAdded();
+      const payload = {
+        ...form,
+        photo: photo || undefined,
+        subscription_fee: parseInt(form.subscription_fee) || undefined,
+        amount_paid: parseFloat(form.amount_paid) || 0,
+        timing: form.timing || undefined,
+      };
+      const result = await api.addMember(payload);
+      onAdded(); // refresh list
+
+      if (result.receipt_id) {
+        setReceipt({
+          id: result.receipt_id,
+          member_name: result.name,
+          membership_id: result.membership_id,
+          amount: parseFloat(form.amount_paid),
+          method: form.payment_method,
+          paid_date: new Date().toISOString().split('T')[0],
+          recorded_by: result.recorded_by || 'Staff',
+          new_due_date: result.new_due_date || result.due_date,
+          note: null,
+        });
+      } else {
+        toast('Member added successfully');
+        onClose();
+      }
     } catch (err) {
       toast(err.message || 'Failed to add member', 'error');
     } finally {
@@ -77,8 +116,12 @@ export default function AddMemberModal({ onClose, onAdded }) {
     }
   }
 
+  if (receipt) {
+    return <ReceiptView receipt={receipt} onClose={onClose} />;
+  }
+
   return (
-    <Modal title="Add New Member" onClose={onClose}>
+    <Modal title="Add New Member" onClose={onClose} width={520}>
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
         {/* Photo upload */}
@@ -94,7 +137,6 @@ export default function AddMemberModal({ onClose, onAdded }) {
               flexShrink: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               background: 'var(--surface2)',
-              position: 'relative',
             }}
           >
             {photo ? (
@@ -135,9 +177,7 @@ export default function AddMemberModal({ onClose, onAdded }) {
               style={{ borderColor: phoneError ? 'var(--danger)' : undefined }}
             />
             {phoneError && (
-              <span style={{ color: 'var(--danger)', fontSize: '12px', marginTop: '2px' }}>
-                {phoneError}
-              </span>
+              <span style={{ color: 'var(--danger)', fontSize: '12px', marginTop: '2px' }}>{phoneError}</span>
             )}
           </Field>
           <Field label="Email">
@@ -150,36 +190,63 @@ export default function AddMemberModal({ onClose, onAdded }) {
           </Field>
         </div>
 
-        <Field label="Subscription Type" required>
-          <Select
-            value={form.subscription_type}
-            onChange={e => set('subscription_type', e.target.value)}
-          >
-            <option value="monthly">Monthly (30 days)</option>
-            <option value="quarterly">Quarterly (90 days)</option>
-            <option value="yearly">Yearly (365 days)</option>
-          </Select>
-        </Field>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <Field label="Subscription Type" required>
+            <Select value={form.subscription_type} onChange={e => set('subscription_type', e.target.value)}>
+              <option value="monthly">Monthly</option>
+              <option value="quarterly">3 Months</option>
+              <option value="6_months">6 Months</option>
+              <option value="yearly">Annual</option>
+            </Select>
+          </Field>
+          <Field label="Timing">
+            <Select value={form.timing} onChange={e => set('timing', e.target.value)}>
+              <option value="">Select timing…</option>
+              {TIMINGS.map(t => <option key={t} value={t}>{t}</option>)}
+            </Select>
+          </Field>
+        </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
           <Field label="Join Date" required>
-            <Input
-              type="date"
-              value={form.join_date}
-              onChange={e => set('join_date', e.target.value)}
-            />
+            <Input type="date" value={form.join_date} onChange={e => set('join_date', e.target.value)} />
           </Field>
           <Field label="Due Date" required>
-            <Input
-              type="date"
-              value={form.due_date}
-              onChange={e => set('due_date', e.target.value)}
-            />
-            <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
-              Auto-calculated · editable
-            </span>
+            <Input type="date" value={form.due_date} onChange={e => set('due_date', e.target.value)} />
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>Auto-calculated · editable</span>
           </Field>
         </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <Field label="Membership Fee (₹)">
+            <Input
+              type="number"
+              min="0"
+              value={form.subscription_fee}
+              onChange={e => set('subscription_fee', e.target.value)}
+              placeholder="1000"
+            />
+          </Field>
+          <Field label="Amount Paid Now (₹)">
+            <Input
+              type="number"
+              min="0"
+              value={form.amount_paid}
+              onChange={e => set('amount_paid', e.target.value)}
+              placeholder="0"
+            />
+          </Field>
+        </div>
+
+        {parseFloat(form.amount_paid) > 0 && (
+          <Field label="Payment Method">
+            <Select value={form.payment_method} onChange={e => set('payment_method', e.target.value)}>
+              <option value="Cash">Cash</option>
+              <option value="UPI">UPI</option>
+              <option value="Card">Card</option>
+            </Select>
+          </Field>
+        )}
 
         <Field label="Notes">
           <Input

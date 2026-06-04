@@ -5,6 +5,7 @@ import Login from './Login';
 import Sidebar from './Sidebar';
 import MembersView from './MembersView';
 import ReportsView from './ReportsView';
+import ReceiptsView from './ReceiptsView';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -63,6 +64,7 @@ function App() {
       />
       <main className="main-content">
         {activeView === 'members' && <MembersView user={user} />}
+        {activeView === 'receipts' && <ReceiptsView user={user} />}
         {activeView === 'reports' && canViewReports && <ReportsView />}
         {activeView === 'reports' && !canViewReports && (
           <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
