@@ -447,8 +447,8 @@ export default function MembersView({ user }) {
         <PaymentModal
           member={paymentMember}
           user={user}
-          onClose={() => setPaymentMember(null)}
-          onPaid={() => { setPaymentMember(null); load(); }}
+          onClose={() => { setPaymentMember(null); load(); }}
+          onPaid={() => load()}
         />
       )}
 
