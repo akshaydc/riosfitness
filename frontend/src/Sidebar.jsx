@@ -30,22 +30,17 @@ export default function Sidebar({ user, activeView, onNavigate, onLogout, isDraw
         alignItems: 'center',
         gap: '11px',
       }}>
-        <div style={{
-          width: 38, height: 38,
-          borderRadius: '10px',
-          background: '#ff6b35',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          flexShrink: 0,
-          boxShadow: '0 4px 12px rgba(255,107,53,0.4)',
-        }}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round">
-            <path d="M18 8h1a4 4 0 0 1 0 8h-1"/>
-            <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/>
-            <line x1="6" y1="1" x2="6" y2="4"/>
-            <line x1="10" y1="1" x2="10" y2="4"/>
-            <line x1="14" y1="1" x2="14" y2="4"/>
-          </svg>
-        </div>
+        <img
+          src="/logo.png"
+          alt="Rios Fitness"
+          style={{
+            width: 38, height: 38,
+            borderRadius: '50%',
+            objectFit: 'cover',
+            flexShrink: 0,
+            boxShadow: '0 4px 12px rgba(0,0,0,0.35)',
+          }}
+        />
         <div>
           <div style={{
             fontFamily: "'Bebas Neue', sans-serif",

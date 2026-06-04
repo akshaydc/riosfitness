@@ -63,9 +63,12 @@ function App() {
             <line x1="3" y1="18" x2="21" y2="18"/>
           </svg>
         </button>
-        <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '18px', letterSpacing: '2px', color: '#fff', lineHeight: 1 }}>
-          RIOS FITNESS
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <img src="/logo.png" alt="Rios Fitness" style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover' }} />
+          <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '18px', letterSpacing: '2px', color: '#fff', lineHeight: 1 }}>
+            RIOS FITNESS
+          </span>
+        </div>
       </div>
 
       {/* Backdrop for sidebar drawer */}

@@ -8,21 +8,17 @@ const SUB_LABELS = {
 
 function GymLogo() {
   return (
-    <div style={{
-      width: 52, height: 52,
-      borderRadius: 14,
-      background: '#0f1f3d',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      flexShrink: 0,
-    }}>
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ff6b35" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M18 8h1a4 4 0 0 1 0 8h-1"/>
-        <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/>
-        <line x1="6" y1="1" x2="6" y2="4"/>
-        <line x1="10" y1="1" x2="10" y2="4"/>
-        <line x1="14" y1="1" x2="14" y2="4"/>
-      </svg>
-    </div>
+    <img
+      src="/logo.png"
+      alt="Rios Fitness"
+      style={{
+        width: 52, height: 52,
+        borderRadius: '50%',
+        objectFit: 'cover',
+        flexShrink: 0,
+        boxShadow: '0 4px 12px rgba(0,0,0,0.35)',
+      }}
+    />
   );
 }
 
