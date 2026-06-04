@@ -433,12 +433,27 @@ export function useToast() {
 export function Toasts() { return null; }
 
 // ─── Avatar ───────────────────────────────────────────────────────────────────
-export function Avatar({ name, size = 36 }) {
+export function Avatar({ name, size = 36, photo }) {
   const initials = name
     ? name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()
     : '?';
   const colors = ['#3b82f6', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444'];
   const color = colors[(name?.charCodeAt(0) || 0) % colors.length];
+  if (photo) {
+    return (
+      <img
+        src={photo}
+        alt={name}
+        style={{
+          width: size, height: size,
+          borderRadius: '50%',
+          objectFit: 'cover',
+          border: `2px solid ${color}50`,
+          flexShrink: 0,
+        }}
+      />
+    );
+  }
   return (
     <div style={{
       width: size, height: size,

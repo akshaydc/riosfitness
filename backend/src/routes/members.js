@@ -112,8 +112,23 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+router.patch('/:id/photo', async (req, res) => {
+  const { photo } = req.body;
+  try {
+    const { rows } = await pool.query(
+      `UPDATE members SET photo = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
+      [photo || null, req.params.id]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Member not found' });
+    res.json(rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 router.post('/', async (req, res) => {
-  const { name, phone, email, subscription_type, due_date, join_date, joined_date, notes } = req.body;
+  const { name, phone, email, subscription_type, due_date, join_date, joined_date, notes, photo } = req.body;
   if (!name || !subscription_type) {
     return res.status(400).json({ error: 'name and subscription_type are required' });
   }
@@ -132,10 +147,10 @@ router.post('/', async (req, res) => {
 
   try {
     const { rows } = await pool.query(
-      `INSERT INTO members (name, phone, email, subscription_type, due_date, joined_date, notes)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO members (name, phone, email, subscription_type, due_date, joined_date, notes, photo)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING *`,
-      [name, phone || null, email || null, subscription_type, dueDate, joinDate, notes || null]
+      [name, phone || null, email || null, subscription_type, dueDate, joinDate, notes || null, photo || null]
     );
     res.status(201).json(rows[0]);
   } catch (err) {

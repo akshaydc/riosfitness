@@ -45,7 +45,7 @@ export default function MemberDetailModal({ memberId, user, onClose, onUpdate, o
       ) : (
         <>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', marginBottom: '20px' }}>
-            <Avatar name={member.name} size={48} />
+            <Avatar name={member.name} size={48} photo={member.photo} />
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: '18px', fontWeight: 700, marginBottom: '4px' }}>{member.name}</div>
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>

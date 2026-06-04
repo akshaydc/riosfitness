@@ -7,6 +7,7 @@ import {
 import AddMemberModal from './AddMemberModal';
 import PaymentModal from './PaymentModal';
 import MemberDetailModal from './MemberDetailModal';
+import ImportModal from './ImportModal';
 
 const dropdownStyle = (active) => ({
   height: '40px',
@@ -34,8 +35,12 @@ export default function MembersView({ user }) {
   const [filterSub, setFilterSub] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [showAdd, setShowAdd] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
   const [paymentMember, setPaymentMember] = useState(null);
   const [detailMemberId, setDetailMemberId] = useState(null);
+
+  const [dismissedBanners, setDismissedBanners] = useState({ overdue: false, dueSoon: false });
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -71,14 +76,190 @@ export default function MembersView({ user }) {
     return <Badge type={s} />;
   }
 
+  function exportCSV() {
+    const headers = ['Name', 'Phone', 'Email', 'Subscription', 'Joined', 'Due Date', 'Status', 'Total Paid'];
+    const rows = members.map(m => [
+      m.name, m.phone || '', m.email || '', m.subscription_type,
+      m.joined_date || '', m.due_date, m.status,
+      m.total_paid,
+    ]);
+    const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'rios-fitness-members.csv'; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function exportPDF() {
+    const rows = members.map(m => `
+      <tr>
+        <td>${m.name}</td>
+        <td>${m.phone || '—'}</td>
+        <td>${m.subscription_type}</td>
+        <td>${m.due_date}</td>
+        <td>${m.status}</td>
+        <td>Rs. ${Number(m.total_paid).toLocaleString('en-IN')}</td>
+      </tr>`).join('');
+    const w = window.open('', '_blank');
+    w.document.write(`<!DOCTYPE html><html><head><title>Members Export</title>
+      <style>
+        body{font-family:sans-serif;padding:24px;color:#212529;}
+        h1{font-size:20px;color:#0f1f3d;margin-bottom:4px;}
+        .sub{font-size:12px;color:#6c757d;margin-bottom:20px;}
+        table{width:100%;border-collapse:collapse;font-size:13px;}
+        th{background:#0f1f3d;color:#fff;padding:9px 12px;text-align:left;}
+        td{padding:8px 12px;border-bottom:1px solid #dee2e6;}
+        tr:nth-child(even) td{background:#f8f9fa;}
+        @media print{body{padding:0;}}
+      </style>
+    </head><body>
+      <h1>RIOS FITNESS — Members</h1>
+      <div class="sub">Exported ${new Date().toLocaleDateString('en-IN')} · ${members.length} members</div>
+      <table>
+        <thead><tr><th>Name</th><th>Phone</th><th>Subscription</th><th>Due Date</th><th>Status</th><th>Total Paid</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </body></html>`);
+    w.document.close(); w.focus();
+    setTimeout(() => w.print(), 400);
+  }
+
+  function downloadTemplate() {
+    const csv = 'name,phone,email,subscription_type,join_date,due_date,notes\nArjun Mehta,9876543210,arjun@example.com,monthly,2025-06-01,2025-07-01,\n';
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'members-template.csv'; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // Compute banner data from all members (unfiltered by tab/dropdown)
+  const today = new Date(); today.setHours(0,0,0,0);
+  const overdueMembers = members.filter(m => {
+    if (m.status === 'cancelled') return false;
+    const due = new Date(m.due_date); due.setHours(0,0,0,0);
+    return due < today;
+  });
+  const dueSoonMembers = members.filter(m => {
+    if (m.status === 'cancelled') return false;
+    const due = new Date(m.due_date); due.setHours(0,0,0,0);
+    const diff = Math.round((due - today) / 86400000);
+    return diff >= 0 && diff <= 7;
+  });
+
+  function daysDiff(dateStr) {
+    const due = new Date(dateStr); due.setHours(0,0,0,0);
+    return Math.round((today - due) / 86400000);
+  }
+
+  function NotifBanner({ members: bMembers, type }) {
+    const isOverdue = type === 'overdue';
+    const dismissed = isOverdue ? dismissedBanners.overdue : dismissedBanners.dueSoon;
+    if (!bMembers.length || dismissed) return null;
+    const bg = isOverdue ? '#fff5f5' : '#fffbeb';
+    const border = isOverdue ? '#fca5a5' : '#fcd34d';
+    const textColor = isOverdue ? '#dc2626' : '#92400e';
+    const label = isOverdue
+      ? `${bMembers.length} member${bMembers.length > 1 ? 's' : ''} with overdue payments`
+      : `${bMembers.length} member${bMembers.length > 1 ? 's' : ''} due this week`;
+    return (
+      <div style={{
+        background: bg,
+        border: `1px solid ${border}`,
+        borderLeft: `4px solid ${isOverdue ? '#dc2626' : '#f59e0b'}`,
+        borderRadius: 'var(--radius-sm)',
+        padding: '12px 14px',
+        marginBottom: '12px',
+        animation: 'fadeIn 0.2s ease',
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: '13px', color: textColor, marginBottom: '8px' }}>
+              {isOverdue ? '⚠ ' : '🕐 '}{label}
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+              {bMembers.map(m => (
+                <button
+                  key={m.id}
+                  onClick={() => setDetailMemberId(m.id)}
+                  style={{
+                    background: isOverdue ? '#fee2e2' : '#fef3c7',
+                    border: `1px solid ${isOverdue ? '#fca5a5' : '#fcd34d'}`,
+                    borderRadius: '6px',
+                    padding: '3px 10px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    color: textColor,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {m.name}
+                  <span style={{ fontWeight: 400, marginLeft: 4 }}>
+                    {isOverdue ? `· ${daysDiff(m.due_date)}d overdue` : `· due ${fmtDate(m.due_date)}`}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <button
+            onClick={() => setDismissedBanners(prev => ({ ...prev, [isOverdue ? 'overdue' : 'dueSoon']: true }))}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: textColor, padding: 2, flexShrink: 0 }}
+          >
+            <Icon name="x" />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="page-header">
         <h1 className="page-title">Members</h1>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <Btn variant="ghost" size="sm" onClick={load}>
-            <Icon name="refresh" />
-            Refresh
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+          {/* Export dropdown */}
+          <div style={{ position: 'relative' }}>
+            <Btn variant="ghost" size="sm" onClick={() => setShowExportMenu(v => !v)}>
+              Export ▾
+            </Btn>
+            {showExportMenu && (
+              <div
+                style={{
+                  position: 'absolute', right: 0, top: '100%', marginTop: 4,
+                  background: 'var(--surface)', border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius-sm)', boxShadow: 'var(--shadow-md)',
+                  zIndex: 200, minWidth: 160, overflow: 'hidden',
+                }}
+                onMouseLeave={() => setShowExportMenu(false)}
+              >
+                {[
+                  { label: 'Export as CSV', fn: exportCSV },
+                  { label: 'Export as PDF', fn: exportPDF },
+                ].map(({ label, fn }) => (
+                  <button
+                    key={label}
+                    onClick={() => { fn(); setShowExportMenu(false); }}
+                    style={{
+                      display: 'block', width: '100%', textAlign: 'left',
+                      padding: '10px 14px', fontSize: '13px', fontWeight: 500,
+                      background: 'none', border: 'none', cursor: 'pointer',
+                      color: 'var(--text-dim)',
+                      borderBottom: '1px solid var(--border)',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'var(--surface2)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <Btn variant="ghost" size="sm" onClick={downloadTemplate}>
+            Template CSV
+          </Btn>
+          <Btn variant="ghost" size="sm" onClick={() => setShowImport(true)}>
+            <Icon name="plus" />
+            Import CSV
           </Btn>
           <Btn variant="primary" onClick={() => setShowAdd(true)}>
             <Icon name="plus" />
@@ -103,6 +284,9 @@ export default function MembersView({ user }) {
           )}
         </div>
       )}
+
+      <NotifBanner members={overdueMembers} type="overdue" />
+      <NotifBanner members={dueSoonMembers} type="due_soon" />
 
       {/* Unified toolbar: search + filters + refresh */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
@@ -181,7 +365,7 @@ export default function MembersView({ user }) {
                 <tr key={m.id} onClick={() => setDetailMemberId(m.id)}>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <Avatar name={m.name} size={32} />
+                      <Avatar name={m.name} size={32} photo={m.photo} />
                       <div>
                         <div style={{ fontWeight: 700, fontSize: '14px', color: 'var(--navy)' }}>{m.name}</div>
                         <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
@@ -238,9 +422,17 @@ export default function MembersView({ user }) {
         />
       )}
 
+      {showImport && (
+        <ImportModal
+          onClose={() => setShowImport(false)}
+          onImported={() => { setShowImport(false); load(); }}
+        />
+      )}
+
       {paymentMember && (
         <PaymentModal
           member={paymentMember}
+          user={user}
           onClose={() => setPaymentMember(null)}
           onPaid={() => { setPaymentMember(null); load(); }}
         />

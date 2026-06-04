@@ -45,6 +45,11 @@ async function migrate() {
       )
     `);
 
+    // Add photo column if missing
+    await client.query(`
+      ALTER TABLE members ADD COLUMN IF NOT EXISTS photo TEXT
+    `);
+
     // One-time credential migration: rename old super@rios.fit account
     const { rows: oldSuper } = await client.query(
       "SELECT id FROM users WHERE email = 'super@rios.fit'"
