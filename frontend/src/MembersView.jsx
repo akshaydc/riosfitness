@@ -8,16 +8,10 @@ import AddMemberModal from './AddMemberModal';
 import PaymentModal from './PaymentModal';
 import MemberDetailModal from './MemberDetailModal';
 
-const TABS = [
-  { id: 'all', label: 'All' },
-  { id: 'active', label: 'Active' },
-  { id: 'overdue', label: 'Overdue' },
-  { id: 'due_soon', label: 'Due Soon' },
-  { id: 'cancelled', label: 'Cancelled' },
-];
-
-const filterSelectStyle = (active) => ({
-  padding: '7px 10px',
+const dropdownStyle = (active) => ({
+  height: '40px',
+  width: '160px',
+  padding: '0 10px',
   background: active ? 'var(--navy)' : 'var(--surface)',
   color: active ? '#ffffff' : 'var(--text-dim)',
   border: `1px solid ${active ? 'var(--navy)' : 'var(--border)'}`,
@@ -27,9 +21,8 @@ const filterSelectStyle = (active) => ({
   cursor: 'pointer',
   outline: 'none',
   boxShadow: 'var(--shadow-sm)',
-  minWidth: 130,
   fontFamily: 'inherit',
-  transition: 'all 0.15s',
+  flexShrink: 0,
 });
 
 export default function MembersView({ user }) {
@@ -38,7 +31,6 @@ export default function MembersView({ user }) {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [activeTab, setActiveTab] = useState('all');
   const [filterSub, setFilterSub] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [showAdd, setShowAdd] = useState(false);
@@ -48,13 +40,17 @@ export default function MembersView({ user }) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      // Status dropdown overrides tab when set; otherwise tab applies
-      const effectiveStatus = filterStatus || (activeTab !== 'all' ? activeTab : undefined);
       const params = {
         search: search || undefined,
-        status: effectiveStatus,
         subscription_type: filterSub || undefined,
       };
+      if (filterStatus === 'overdue') {
+        params.due_filter = 'overdue';
+      } else if (filterStatus === 'due_soon') {
+        params.due_filter = 'due_soon';
+      } else if (filterStatus) {
+        params.status = filterStatus;
+      }
       const [m, s] = await Promise.all([api.getMembers(params), api.getStats()]);
       setMembers(m);
       setStats(s);
@@ -63,7 +59,7 @@ export default function MembersView({ user }) {
     } finally {
       setLoading(false);
     }
-  }, [search, activeTab, filterSub, filterStatus]);
+  }, [search, filterSub, filterStatus]);
 
   useEffect(() => {
     const t = setTimeout(load, search ? 300 : 0);
@@ -74,8 +70,6 @@ export default function MembersView({ user }) {
     const s = dueDateStatus(member);
     return <Badge type={s} />;
   }
-
-  const hasActiveFilters = filterSub || filterStatus;
 
   return (
     <div>
@@ -110,25 +104,24 @@ export default function MembersView({ user }) {
         </div>
       )}
 
-      {/* Tab filters */}
-      <div className="tabs">
-        {TABS.map(tab => (
-          <button
-            key={tab.id}
-            className={`tab ${activeTab === tab.id ? 'active' : ''}`}
-            onClick={() => { setActiveTab(tab.id); setFilterStatus(''); }}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Search + dropdown filters */}
-      <div className="controls-row">
-        <div className="search-wrap">
-          <Icon name="search" />
+      {/* Unified toolbar: search + filters + refresh */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
+        <div style={{ position: 'relative', flex: 1 }}>
+          <span style={{
+            position: 'absolute',
+            left: '10px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            display: 'flex',
+            alignItems: 'center',
+            color: 'var(--text-muted)',
+            pointerEvents: 'none',
+          }}>
+            <Icon name="search" />
+          </span>
           <input
             className="search-input"
+            style={{ paddingLeft: '34px', height: '40px', width: '100%', boxSizing: 'border-box' }}
             placeholder="Search by name, phone, email…"
             value={search}
             onChange={e => setSearch(e.target.value)}
@@ -138,7 +131,7 @@ export default function MembersView({ user }) {
         <select
           value={filterSub}
           onChange={e => setFilterSub(e.target.value)}
-          style={filterSelectStyle(!!filterSub)}
+          style={dropdownStyle(!!filterSub)}
         >
           <option value="">All Types</option>
           <option value="monthly">Monthly</option>
@@ -148,26 +141,20 @@ export default function MembersView({ user }) {
 
         <select
           value={filterStatus}
-          onChange={e => { setFilterStatus(e.target.value); setActiveTab('all'); }}
-          style={filterSelectStyle(!!filterStatus)}
+          onChange={e => setFilterStatus(e.target.value)}
+          style={dropdownStyle(!!filterStatus)}
         >
           <option value="">All Status</option>
           <option value="active">Active</option>
-          <option value="cancelled">Cancelled</option>
+          <option value="overdue">Overdue</option>
           <option value="due_soon">Due Soon</option>
+          <option value="cancelled">Cancelled</option>
         </select>
 
-        {hasActiveFilters && (
-          <Btn
-            variant="ghost"
-            size="sm"
-            onClick={() => { setFilterSub(''); setFilterStatus(''); }}
-            style={{ color: 'var(--danger)', borderColor: 'rgba(220,53,69,0.3)' }}
-          >
-            <Icon name="x" />
-            Clear
-          </Btn>
-        )}
+        <Btn variant="ghost" size="sm" onClick={load} style={{ height: '40px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+          <Icon name="refresh" />
+          Refresh
+        </Btn>
       </div>
 
       <div className="table-wrap">
