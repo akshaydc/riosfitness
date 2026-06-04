@@ -45,8 +45,30 @@ router.post('/', async (req, res) => {
       [newDue, member_id]
     );
 
+    const today = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    const datePart = `${today.getFullYear()}${pad(today.getMonth() + 1)}${pad(today.getDate())}`;
+    const receiptId = `RCT-${datePart}-${String(payment.id).padStart(4, '0')}`;
+    const membershipId = `#${String(member_id).padStart(4, '0')}`;
+
+    const { rows: [receiptUser] } = await client.query('SELECT name FROM users WHERE id = $1', [req.user.id]);
+    const recordedBy = receiptUser?.name || 'Staff';
+
+    await client.query(
+      `INSERT INTO receipts (id, payment_id, member_id, member_name, membership_id, amount, method, paid_date, recorded_by, new_due_date, note, receipt_data)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+       ON CONFLICT (id) DO NOTHING`,
+      [
+        receiptId, payment.id, member_id, member.name, membershipId,
+        amount, payment_method || 'Cash',
+        today.toISOString().split('T')[0],
+        recordedBy, newDue, note || null,
+        JSON.stringify({ receiptId, memberName: member.name, membershipId, amount, method: payment_method || 'Cash', paidDate: today.toISOString().split('T')[0], recordedBy, newDueDate: newDue, note: note || null }),
+      ]
+    );
+
     await client.query('COMMIT');
-    res.status(201).json({ payment, new_due_date: newDue });
+    res.status(201).json({ payment, new_due_date: newDue, receipt_id: receiptId, recorded_by: recordedBy });
   } catch (err) {
     await client.query('ROLLBACK');
     console.error(err);

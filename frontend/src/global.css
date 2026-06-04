@@ -255,6 +255,19 @@ tbody tr:hover {
   to { transform: rotate(360deg); }
 }
 
+@media print {
+  body * { visibility: hidden !important; }
+  .rf-receipt, .rf-receipt * { visibility: visible !important; }
+  .rf-receipt {
+    position: fixed !important;
+    inset: 0 !important;
+    padding: 40px !important;
+    background: #ffffff !important;
+    z-index: 99999 !important;
+  }
+  .rf-no-print { display: none !important; }
+}
+
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }

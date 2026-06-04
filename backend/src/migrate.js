@@ -45,6 +45,24 @@ async function migrate() {
       )
     `);
 
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS receipts (
+        id TEXT PRIMARY KEY,
+        payment_id INTEGER NOT NULL REFERENCES payments(id) ON DELETE CASCADE,
+        member_id INTEGER NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+        member_name TEXT NOT NULL,
+        membership_id TEXT NOT NULL,
+        amount NUMERIC(10,2) NOT NULL,
+        method TEXT NOT NULL,
+        paid_date DATE NOT NULL,
+        recorded_by TEXT NOT NULL,
+        new_due_date DATE,
+        note TEXT,
+        receipt_data JSONB,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+
     // Add photo column if missing
     await client.query(`
       ALTER TABLE members ADD COLUMN IF NOT EXISTS photo TEXT

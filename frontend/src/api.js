@@ -60,4 +60,7 @@ export const api = {
     request(`/api/payments${member_id ? `?member_id=${member_id}` : ''}`),
 
   getRevenue: () => request('/api/payments/revenue'),
+
+  getMemberReceipts: (memberId) => request(`/api/receipts/member/${memberId}`),
+  getReceipt: (receiptId) => request(`/api/receipts/${encodeURIComponent(receiptId)}`),
 };

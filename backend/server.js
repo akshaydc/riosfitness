@@ -14,6 +14,7 @@ app.use(express.json());
 app.use('/api/auth', require('./src/routes/auth'));
 app.use('/api/members', require('./src/routes/members'));
 app.use('/api/payments', require('./src/routes/payments'));
+app.use('/api/receipts', require('./src/routes/receipts'));
 
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 
