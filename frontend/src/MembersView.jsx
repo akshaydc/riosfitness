@@ -137,7 +137,7 @@ export default function MembersView({ user }) {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                       <Avatar name={m.name} size={32} />
                       <div>
-                        <div style={{ fontWeight: 600, fontSize: '14px' }}>{m.name}</div>
+                        <div style={{ fontWeight: 700, fontSize: '14px', color: 'var(--navy)' }}>{m.name}</div>
                         <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                           {m.phone || m.email || '—'}
                         </div>
@@ -152,7 +152,7 @@ export default function MembersView({ user }) {
                   </td>
                   <td>{getDueStatusBadge(m)}</td>
                   <td>
-                    <span style={{ fontSize: '13px', fontWeight: 600 }}>
+                    <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--navy)' }}>
                       {fmtCurrency(m.total_paid)}
                     </span>
                   </td>

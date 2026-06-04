@@ -45,15 +45,29 @@ async function migrate() {
       )
     `);
 
+    // One-time credential migration: rename old super@rios.fit account
+    const { rows: oldSuper } = await client.query(
+      "SELECT id FROM users WHERE email = 'super@rios.fit'"
+    );
+    if (oldSuper.length > 0) {
+      const migratedHash = await bcrypt.hash('Rio#2026', 10);
+      await client.query(
+        `UPDATE users SET email = 'sharath@rios.fit', name = 'Sharath K', password_hash = $1
+         WHERE email = 'super@rios.fit'`,
+        [migratedHash]
+      );
+      console.log('Migrated super@rios.fit → sharath@rios.fit');
+    }
+
     const { rows: existingUsers } = await client.query('SELECT id FROM users LIMIT 1');
     if (existingUsers.length === 0) {
-      const superHash = await bcrypt.hash('super123', 10);
+      const superHash = await bcrypt.hash('Rio#2026', 10);
       const adminHash = await bcrypt.hash('admin123', 10);
 
       await client.query(
         `INSERT INTO users (email, password_hash, name, role) VALUES ($1, $2, $3, $4), ($5, $6, $7, $8)`,
         [
-          'super@rios.fit', superHash, 'Super Admin', 'super_admin',
+          'sharath@rios.fit', superHash, 'Sharath K', 'super_admin',
           'admin@rios.fit', adminHash, 'Admin User', 'admin',
         ]
       );

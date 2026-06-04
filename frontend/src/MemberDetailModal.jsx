@@ -71,13 +71,14 @@ export default function MemberDetailModal({ memberId, user, onClose, onUpdate, o
             ].map(({ label, value }) => (
               <div key={label} style={{
                 background: 'var(--surface2)',
+                border: '1px solid var(--border)',
                 borderRadius: 'var(--radius-sm)',
                 padding: '10px 12px',
               }}>
                 <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 3 }}>
                   {label}
                 </div>
-                <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>{value}</div>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--navy)' }}>{value}</div>
               </div>
             ))}
           </div>
@@ -85,6 +86,7 @@ export default function MemberDetailModal({ memberId, user, onClose, onUpdate, o
           {member.notes && (
             <div style={{
               background: 'var(--surface2)',
+              border: '1px solid var(--border)',
               borderRadius: 'var(--radius-sm)',
               padding: '10px 12px',
               marginBottom: '20px',
@@ -108,8 +110,9 @@ export default function MemberDetailModal({ memberId, user, onClose, onUpdate, o
                 border: '1px solid var(--border)',
                 borderRadius: 'var(--radius-sm)',
                 overflow: 'hidden',
-                maxHeight: 220,
+                maxHeight: 240,
                 overflowY: 'auto',
+                background: 'var(--surface)',
               }}>
                 {member.payments.map(p => (
                   <div key={p.id} style={{

@@ -41,7 +41,7 @@ function App() {
 
   if (loading) {
     return (
-      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)' }}>
+      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f0f2f5' }}>
         <Spinner size={32} />
       </div>
     );

@@ -46,7 +46,8 @@ export default function PaymentModal({ member, onClose, onPaid }) {
   return (
     <Modal title="Record Payment" onClose={onClose}>
       <div style={{
-        background: 'var(--surface2)',
+        background: 'linear-gradient(135deg, #f0f4ff, #f8f9fa)',
+        border: '1px solid var(--border)',
         borderRadius: 'var(--radius-sm)',
         padding: '12px 14px',
         marginBottom: '16px',
@@ -86,9 +87,9 @@ export default function PaymentModal({ member, onClose, onPaid }) {
                   borderRadius: 4,
                   fontSize: '11px',
                   fontWeight: 600,
-                  background: form.amount === String(amt) ? 'var(--accent-dim)' : 'var(--surface3)',
+                  background: form.amount === String(amt) ? 'var(--accent-dim)' : 'var(--surface2)',
                   color: form.amount === String(amt) ? 'var(--accent)' : 'var(--text-dim)',
-                  border: `1px solid ${form.amount === String(amt) ? 'rgba(232,255,58,0.3)' : 'var(--border)'}`,
+                  border: `1px solid ${form.amount === String(amt) ? 'rgba(255,107,53,0.35)' : 'var(--border)'}`,
                   cursor: 'pointer',
                 }}
               >

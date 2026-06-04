@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, createContext, useContext, useRef } from 'react';
+import { useState, useEffect, useCallback, createContext, useContext } from 'react';
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 const icons = {
@@ -11,9 +11,8 @@ const icons = {
     </svg>
   ),
   dollar: (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="12" y1="1" x2="12" y2="23"/>
-      <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+    <svg width="16" height="16" viewBox="0 0 24 24">
+      <text x="3" y="18" fontSize="16" fontWeight="700" fill="currentColor" fontFamily="'DM Sans',sans-serif">₹</text>
     </svg>
   ),
   alert: (
@@ -112,8 +111,9 @@ export function Btn({ variant = 'primary', size = 'default', children, className
   const styles = {
     primary: {
       background: 'var(--accent)',
-      color: '#09090f',
+      color: '#ffffff',
       border: 'none',
+      boxShadow: '0 2px 8px rgba(255,107,53,0.35)',
     },
     ghost: {
       background: 'transparent',
@@ -123,18 +123,18 @@ export function Btn({ variant = 'primary', size = 'default', children, className
     danger: {
       background: 'var(--danger-dim)',
       color: 'var(--danger)',
-      border: '1px solid rgba(255,77,77,0.3)',
+      border: '1px solid rgba(220,53,69,0.25)',
     },
     green: {
       background: 'var(--green-dim)',
       color: 'var(--green)',
-      border: '1px solid rgba(34,197,94,0.3)',
+      border: '1px solid rgba(25,135,84,0.25)',
     },
   };
 
   const sizeStyles = {
-    default: { padding: '8px 16px', fontSize: '14px', borderRadius: 'var(--radius-sm)' },
-    sm: { padding: '5px 10px', fontSize: '12px', borderRadius: '5px' },
+    default: { padding: '9px 18px', fontSize: '14px', borderRadius: 'var(--radius-sm)' },
+    sm: { padding: '5px 10px', fontSize: '12px', borderRadius: '6px' },
   };
 
   return (
@@ -144,7 +144,7 @@ export function Btn({ variant = 'primary', size = 'default', children, className
         alignItems: 'center',
         gap: '6px',
         fontWeight: 600,
-        transition: 'opacity 0.15s, transform 0.1s',
+        transition: 'opacity 0.15s, transform 0.1s, box-shadow 0.15s',
         cursor: props.disabled ? 'not-allowed' : 'pointer',
         opacity: props.disabled ? 0.5 : 1,
         ...styles[variant],
@@ -160,33 +160,34 @@ export function Btn({ variant = 'primary', size = 'default', children, className
 
 // ─── Badge ────────────────────────────────────────────────────────────────────
 const badgeConfig = {
-  monthly:    { bg: 'var(--blue-dim)',   color: 'var(--blue)',   label: 'Monthly' },
-  quarterly:  { bg: 'var(--accent-dim)', color: 'var(--accent)', label: 'Quarterly' },
-  yearly:     { bg: 'var(--green-dim)',  color: 'var(--green)',  label: 'Yearly' },
-  active:     { bg: 'var(--green-dim)',  color: 'var(--green)',  label: 'Active' },
-  cancelled:  { bg: 'rgba(100,100,120,0.2)', color: 'var(--text-muted)', label: 'Cancelled' },
-  overdue:    { bg: 'var(--danger-dim)', color: 'var(--danger)', label: 'Overdue' },
-  'due-soon': { bg: 'var(--orange-dim)', color: 'var(--orange)', label: 'Due Soon' },
-  ok:         { bg: 'var(--green-dim)',  color: 'var(--green)',  label: 'OK' },
-  Cash:       { bg: 'var(--green-dim)',  color: 'var(--green)',  label: 'Cash' },
-  UPI:        { bg: 'var(--blue-dim)',   color: 'var(--blue)',   label: 'UPI' },
-  Card:       { bg: 'var(--accent-dim)', color: 'var(--accent)', label: 'Card' },
+  monthly:    { bg: '#dbeafe',    color: '#1d4ed8',  label: 'Monthly' },
+  quarterly:  { bg: '#ffedd5',    color: '#c2410c',  label: 'Quarterly' },
+  yearly:     { bg: '#dcfce7',    color: '#15803d',  label: 'Yearly' },
+  active:     { bg: '#dcfce7',    color: '#15803d',  label: 'Active' },
+  cancelled:  { bg: '#f3f4f6',    color: '#6b7280',  label: 'Cancelled' },
+  overdue:    { bg: '#fee2e2',    color: '#dc2626',  label: 'Overdue' },
+  'due-soon': { bg: '#ffedd5',    color: '#c2410c',  label: 'Due Soon' },
+  ok:         { bg: '#dcfce7',    color: '#15803d',  label: 'OK' },
+  Cash:       { bg: '#dcfce7',    color: '#15803d',  label: 'Cash' },
+  UPI:        { bg: '#dbeafe',    color: '#1d4ed8',  label: 'UPI' },
+  Card:       { bg: '#ede9fe',    color: '#6d28d9',  label: 'Card' },
 };
 
 export function Badge({ type }) {
-  const cfg = badgeConfig[type] || { bg: 'rgba(100,100,120,0.2)', color: 'var(--text-dim)', label: type };
+  const cfg = badgeConfig[type] || { bg: '#f3f4f6', color: '#6b7280', label: type };
   return (
     <span style={{
       display: 'inline-flex',
       alignItems: 'center',
-      padding: '2px 8px',
-      borderRadius: '4px',
+      padding: '3px 9px',
+      borderRadius: '6px',
       fontSize: '12px',
       fontWeight: 600,
       background: cfg.bg,
       color: cfg.color,
       textTransform: 'capitalize',
       whiteSpace: 'nowrap',
+      letterSpacing: '0.1px',
     }}>
       {cfg.label}
     </span>
@@ -195,38 +196,52 @@ export function Badge({ type }) {
 
 // ─── StatCard ─────────────────────────────────────────────────────────────────
 export function StatCard({ label, value, icon, accent = false, color }) {
+  const iconBg = accent
+    ? 'rgba(255,107,53,0.12)'
+    : color === 'var(--green)' ? 'rgba(25,135,84,0.10)'
+    : color === 'var(--danger)' ? 'rgba(220,53,69,0.10)'
+    : color === 'var(--orange)' ? 'rgba(253,126,20,0.10)'
+    : '#f0f4ff';
+
+  const iconColor = accent ? 'var(--accent)' : color || '#4b6cb7';
+
   return (
     <div style={{
       background: 'var(--surface)',
-      border: `1px solid ${accent ? 'rgba(232,255,58,0.3)' : 'var(--border)'}`,
+      border: `1px solid ${accent ? 'rgba(255,107,53,0.25)' : 'var(--border)'}`,
       borderRadius: 'var(--radius)',
+      borderLeft: accent ? '3px solid var(--accent)' : undefined,
       padding: '18px 20px',
       display: 'flex',
       flexDirection: 'column',
-      gap: '10px',
+      gap: '12px',
+      boxShadow: 'var(--shadow-sm)',
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <span style={{ fontSize: '13px', color: 'var(--text-dim)', fontWeight: 500 }}>{label}</span>
+        <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          {label}
+        </span>
         {icon && (
           <span style={{
-            width: 32,
-            height: 32,
-            borderRadius: '8px',
-            background: accent ? 'var(--accent-dim)' : 'var(--surface2)',
+            width: 34,
+            height: 34,
+            borderRadius: '9px',
+            background: iconBg,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: accent ? 'var(--accent)' : color || 'var(--text-dim)',
+            color: iconColor,
           }}>
             <Icon name={icon} />
           </span>
         )}
       </div>
       <div style={{
-        fontSize: '26px',
+        fontSize: '28px',
         fontWeight: 800,
-        color: accent ? 'var(--accent)' : (color || 'var(--text)'),
+        color: accent ? 'var(--accent)' : 'var(--navy)',
         letterSpacing: '-0.5px',
+        lineHeight: 1,
       }}>
         {value}
       </div>
@@ -248,21 +263,27 @@ export function Field({ label, children, required }) {
 
 const inputStyle = {
   padding: '9px 12px',
-  background: 'var(--surface2)',
+  background: 'var(--surface)',
   border: '1px solid var(--border)',
   borderRadius: 'var(--radius-sm)',
   color: 'var(--text)',
   outline: 'none',
   width: '100%',
-  transition: 'border-color 0.15s',
+  transition: 'border-color 0.15s, box-shadow 0.15s',
 };
 
 export function Input({ ...props }) {
   return (
     <input
       style={inputStyle}
-      onFocus={e => (e.target.style.borderColor = 'var(--accent)')}
-      onBlur={e => (e.target.style.borderColor = 'var(--border)')}
+      onFocus={e => {
+        e.target.style.borderColor = 'var(--accent)';
+        e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)';
+      }}
+      onBlur={e => {
+        e.target.style.borderColor = 'var(--border)';
+        e.target.style.boxShadow = 'none';
+      }}
       {...props}
     />
   );
@@ -272,8 +293,14 @@ export function Select({ children, ...props }) {
   return (
     <select
       style={{ ...inputStyle, cursor: 'pointer' }}
-      onFocus={e => (e.target.style.borderColor = 'var(--accent)')}
-      onBlur={e => (e.target.style.borderColor = 'var(--border)')}
+      onFocus={e => {
+        e.target.style.borderColor = 'var(--accent)';
+        e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)';
+      }}
+      onBlur={e => {
+        e.target.style.borderColor = 'var(--border)';
+        e.target.style.boxShadow = 'none';
+      }}
       {...props}
     >
       {children}
@@ -293,7 +320,8 @@ export function Modal({ title, onClose, children, width = 480 }) {
     <div
       style={{
         position: 'fixed', inset: 0,
-        background: 'rgba(0,0,0,0.7)',
+        background: 'rgba(15, 31, 61, 0.55)',
+        backdropFilter: 'blur(2px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         zIndex: 1000,
         padding: '16px',
@@ -308,22 +336,34 @@ export function Modal({ title, onClose, children, width = 480 }) {
         maxWidth: width,
         maxHeight: '90vh',
         overflow: 'auto',
-        boxShadow: 'var(--shadow)',
+        boxShadow: 'var(--shadow-md)',
       }}>
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '18px 20px',
+          padding: '18px 22px',
           borderBottom: '1px solid var(--border)',
+          background: 'var(--surface2)',
         }}>
-          <h2 style={{ fontSize: '16px', fontWeight: 700 }}>{title}</h2>
+          <h2 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--navy)' }}>{title}</h2>
           <button
             onClick={onClose}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', padding: 4, borderRadius: 4, display: 'flex' }}
+            style={{
+              background: 'var(--surface3)',
+              border: '1px solid var(--border)',
+              cursor: 'pointer',
+              color: 'var(--text-dim)',
+              padding: '4px',
+              borderRadius: '6px',
+              display: 'flex',
+              transition: 'background 0.15s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--danger-dim)'; e.currentTarget.style.color = 'var(--danger)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'var(--surface3)'; e.currentTarget.style.color = 'var(--text-dim)'; }}
           >
             <Icon name="x" />
           </button>
         </div>
-        <div style={{ padding: '20px' }}>
+        <div style={{ padding: '22px' }}>
           {children}
         </div>
       </div>
@@ -366,14 +406,15 @@ export function ToastProvider({ children }) {
       }}>
         {toasts.map(t => (
           <div key={t.id} style={{
-            background: t.type === 'error' ? '#2a0f0f' : '#0f1f0f',
-            border: `1px solid ${t.type === 'error' ? 'rgba(255,77,77,0.4)' : 'rgba(34,197,94,0.4)'}`,
+            background: '#ffffff',
+            border: '1px solid var(--border)',
+            borderLeft: `4px solid ${t.type === 'error' ? 'var(--danger)' : 'var(--green)'}`,
             color: t.type === 'error' ? 'var(--danger)' : 'var(--green)',
-            padding: '10px 16px',
+            padding: '12px 16px',
             borderRadius: 'var(--radius-sm)',
             fontSize: '13px',
-            fontWeight: 500,
-            boxShadow: 'var(--shadow)',
+            fontWeight: 600,
+            boxShadow: 'var(--shadow-md)',
             animation: 'fadeIn 0.2s ease',
             maxWidth: '320px',
           }}>
@@ -396,14 +437,14 @@ export function Avatar({ name, size = 36 }) {
   const initials = name
     ? name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()
     : '?';
-  const colors = ['#6366f1', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444'];
+  const colors = ['#3b82f6', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444'];
   const color = colors[(name?.charCodeAt(0) || 0) % colors.length];
   return (
     <div style={{
       width: size, height: size,
       borderRadius: '50%',
-      background: color + '33',
-      border: `2px solid ${color}66`,
+      background: color + '20',
+      border: `2px solid ${color}50`,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -441,8 +482,16 @@ export function EmptyState({ icon = 'users', message = 'No results found' }) {
       gap: '12px',
       color: 'var(--text-muted)',
     }}>
-      <Icon name={icon} size={32} />
-      <p style={{ fontSize: '14px' }}>{message}</p>
+      <div style={{
+        width: 56, height: 56,
+        borderRadius: '14px',
+        background: 'var(--surface2)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        color: 'var(--border-strong)',
+      }}>
+        <Icon name={icon} size={24} />
+      </div>
+      <p style={{ fontSize: '14px', fontWeight: 500 }}>{message}</p>
     </div>
   );
 }

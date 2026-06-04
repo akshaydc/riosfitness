@@ -26,31 +26,50 @@ export default function Login({ onLogin }) {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'var(--bg)',
+      background: 'linear-gradient(135deg, #0f1f3d 0%, #1a3160 60%, #0f1f3d 100%)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       padding: '24px',
+      position: 'relative',
+      overflow: 'hidden',
     }}>
+      {/* background decoration */}
+      <div style={{
+        position: 'absolute', top: -120, right: -120,
+        width: 400, height: 400,
+        borderRadius: '50%',
+        background: 'rgba(255,107,53,0.08)',
+        pointerEvents: 'none',
+      }} />
+      <div style={{
+        position: 'absolute', bottom: -80, left: -80,
+        width: 300, height: 300,
+        borderRadius: '50%',
+        background: 'rgba(255,107,53,0.05)',
+        pointerEvents: 'none',
+      }} />
+
       <div style={{
         width: '100%',
-        maxWidth: 400,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '32px',
+        maxWidth: 420,
+        position: 'relative',
+        zIndex: 1,
       }}>
-        <div style={{ textAlign: 'center' }}>
+        {/* Branding */}
+        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
           <div style={{
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
-            width: 64,
-            height: 64,
-            borderRadius: '16px',
-            background: 'var(--accent)',
-            marginBottom: 16,
+            width: 72,
+            height: 72,
+            borderRadius: '20px',
+            background: '#ff6b35',
+            boxShadow: '0 8px 32px rgba(255,107,53,0.4)',
+            marginBottom: '20px',
           }}>
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#09090f" strokeWidth="2.5" strokeLinecap="round">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round">
               <path d="M18 8h1a4 4 0 0 1 0 8h-1"/>
               <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/>
               <line x1="6" y1="1" x2="6" y2="4"/>
@@ -58,27 +77,43 @@ export default function Login({ onLogin }) {
               <line x1="14" y1="1" x2="14" y2="4"/>
             </svg>
           </div>
-          <h1 style={{ fontSize: '28px', fontWeight: 800, letterSpacing: '-0.5px', marginBottom: 4 }}>
-            Rios Fitness
+          <h1 style={{
+            fontFamily: "'Bebas Neue', sans-serif",
+            fontSize: '42px',
+            fontWeight: 400,
+            letterSpacing: '3px',
+            color: '#ffffff',
+            marginBottom: '6px',
+            lineHeight: 1,
+          }}>
+            RIOS FITNESS
           </h1>
-          <p style={{ color: 'var(--text-dim)', fontSize: '14px' }}>
-            Gym Management System
+          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '13px', letterSpacing: '1px', textTransform: 'uppercase' }}>
+            Management System
           </p>
         </div>
 
+        {/* Login card */}
         <div style={{
-          background: 'var(--surface)',
-          border: '1px solid var(--border)',
-          borderRadius: 'var(--radius)',
-          padding: '28px',
+          background: '#ffffff',
+          borderRadius: '16px',
+          padding: '32px',
+          boxShadow: '0 24px 64px rgba(0,0,0,0.3)',
         }}>
+          <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#0f1f3d', marginBottom: '4px' }}>
+            Welcome back
+          </h2>
+          <p style={{ color: '#6c757d', fontSize: '13px', marginBottom: '24px' }}>
+            Sign in to your account to continue
+          </p>
+
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <Field label="Email" required>
+            <Field label="Email Address" required>
               <Input
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder="admin@rios.fit"
+                placeholder="you@rios.fit"
                 autoFocus
                 autoComplete="email"
               />
@@ -92,27 +127,32 @@ export default function Login({ onLogin }) {
                 autoComplete="current-password"
               />
             </Field>
-            <Btn type="submit" variant="primary" disabled={loading} style={{ marginTop: 4, justifyContent: 'center' }}>
-              {loading ? 'Signing in…' : 'Sign In'}
-            </Btn>
-          </form>
-        </div>
 
-        <div style={{
-          background: 'var(--surface)',
-          border: '1px solid var(--border)',
-          borderRadius: 'var(--radius)',
-          padding: '14px 18px',
-        }}>
-          <p style={{ fontSize: '12px', color: 'var(--text-dim)', fontWeight: 600, marginBottom: 6 }}>Demo credentials</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-              Super Admin: <span style={{ color: 'var(--accent)' }}>super@rios.fit</span> / super123
-            </p>
-            <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-              Admin: <span style={{ color: 'var(--blue)' }}>admin@rios.fit</span> / admin123
-            </p>
-          </div>
+            <button
+              type="submit"
+              disabled={loading}
+              style={{
+                marginTop: '8px',
+                width: '100%',
+                padding: '13px 24px',
+                background: loading ? '#e9ecef' : '#ff6b35',
+                color: loading ? '#6c757d' : '#ffffff',
+                border: 'none',
+                borderRadius: '10px',
+                fontSize: '15px',
+                fontWeight: 700,
+                letterSpacing: '0.3px',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                boxShadow: loading ? 'none' : '0 4px 16px rgba(255,107,53,0.4)',
+                transition: 'all 0.2s',
+                fontFamily: "'DM Sans', sans-serif",
+              }}
+              onMouseEnter={e => { if (!loading) { e.currentTarget.style.background = '#e55a25'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(255,107,53,0.5)'; } }}
+              onMouseLeave={e => { if (!loading) { e.currentTarget.style.background = '#ff6b35'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(255,107,53,0.4)'; } }}
+            >
+              {loading ? 'Signing in…' : 'Sign In'}
+            </button>
+          </form>
         </div>
       </div>
     </div>

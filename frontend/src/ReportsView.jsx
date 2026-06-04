@@ -36,7 +36,7 @@ function BarChart({ data }) {
               <div style={{
                 width: '100%',
                 height: `${Math.max(pct, 4)}%`,
-                background: isLast ? 'var(--accent)' : 'var(--surface3)',
+                background: isLast ? 'var(--accent)' : 'rgba(15,31,61,0.12)',
                 borderRadius: '4px 4px 0 0',
                 transition: 'height 0.3s ease',
                 minHeight: 4,
@@ -88,9 +88,10 @@ export default function ReportsView() {
           border: '1px solid var(--border)',
           borderRadius: 'var(--radius)',
           overflow: 'hidden',
+          boxShadow: 'var(--shadow-sm)',
         }}>
-          <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
-            <div style={{ fontWeight: 700, fontSize: '15px' }}>Monthly Revenue</div>
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
+            <div style={{ fontWeight: 700, fontSize: '15px', color: 'var(--navy)' }}>Monthly Revenue</div>
             <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: 2 }}>Last 6 months</div>
           </div>
           <BarChart data={data?.monthly} />
@@ -101,9 +102,10 @@ export default function ReportsView() {
           border: '1px solid var(--border)',
           borderRadius: 'var(--radius)',
           overflow: 'hidden',
+          boxShadow: 'var(--shadow-sm)',
         }}>
-          <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
-            <div style={{ fontWeight: 700, fontSize: '15px' }}>This Month by Type</div>
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
+            <div style={{ fontWeight: 700, fontSize: '15px', color: 'var(--navy)' }}>This Month by Type</div>
             <div style={{ fontSize: '13px', color: 'var(--accent)', fontWeight: 700, marginTop: 2 }}>
               {fmtCurrency(totalThisMonth)}
             </div>
@@ -119,12 +121,13 @@ export default function ReportsView() {
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     padding: '10px 12px',
-                    background: 'var(--surface2)',
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border)',
                     borderRadius: 'var(--radius-sm)',
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <Badge type={t.subscription_type} />
-                      <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                      <span style={{ fontSize: '12px', color: 'var(--text-dim)' }}>
                         {t.count} payment{t.count !== '1' ? 's' : ''}
                       </span>
                     </div>
@@ -142,9 +145,10 @@ export default function ReportsView() {
         border: '1px solid var(--border)',
         borderRadius: 'var(--radius)',
         overflow: 'hidden',
+        boxShadow: 'var(--shadow-sm)',
       }}>
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
-          <div style={{ fontWeight: 700, fontSize: '15px' }}>Recent Payments</div>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
+          <div style={{ fontWeight: 700, fontSize: '15px', color: 'var(--navy)' }}>Recent Payments</div>
           <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: 2 }}>Last 100 transactions</div>
         </div>
         {!payments.length ? (
