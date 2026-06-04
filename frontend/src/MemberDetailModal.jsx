@@ -149,7 +149,7 @@ export default function MemberDetailModal({ memberId, user, onClose, onUpdate, o
             {member.status !== 'cancelled' && (
               <Btn variant="green" onClick={() => { onClose(); onPayment(member); }}>
                 <Icon name="dollar" />
-                Record Payment
+                Add Payment
               </Btn>
             )}
           </ModalActions>

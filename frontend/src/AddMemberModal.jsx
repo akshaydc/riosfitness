@@ -1,35 +1,57 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { api } from './api';
 import { Modal, ModalActions, Btn, Field, Input, Select, useToast } from './components';
 
-const defaultDueDate = () => {
-  const d = new Date();
-  d.setDate(d.getDate() + 30);
-  return d.toISOString().split('T')[0];
-};
+const SUB_DAYS = { monthly: 30, quarterly: 90, yearly: 365 };
 
 const todayStr = () => new Date().toISOString().split('T')[0];
+
+function calcDueDate(joinDate, subType) {
+  if (!joinDate) return '';
+  const d = new Date(joinDate);
+  if (isNaN(d.getTime())) return '';
+  d.setDate(d.getDate() + (SUB_DAYS[subType] || 30));
+  return d.toISOString().split('T')[0];
+}
 
 export default function AddMemberModal({ onClose, onAdded }) {
   const toast = useToast();
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({
-    name: '',
-    phone: '',
-    email: '',
-    subscription_type: 'monthly',
-    due_date: defaultDueDate(),
-    joined_date: todayStr(),
-    notes: '',
+  const [phoneError, setPhoneError] = useState('');
+  const [form, setForm] = useState(() => {
+    const today = todayStr();
+    return {
+      name: '',
+      phone: '',
+      email: '',
+      subscription_type: 'monthly',
+      join_date: today,
+      due_date: calcDueDate(today, 'monthly'),
+      notes: '',
+    };
   });
 
+  // Auto-recalculate due_date when join_date or subscription_type changes
+  const { join_date, subscription_type } = form;
+  useEffect(() => {
+    const calculated = calcDueDate(join_date, subscription_type);
+    if (calculated) {
+      setForm(prev => ({ ...prev, due_date: calculated }));
+    }
+  }, [join_date, subscription_type]);
+
   function set(field, value) {
+    if (field === 'phone') setPhoneError('');
     setForm(prev => ({ ...prev, [field]: value }));
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
     if (!form.name.trim()) return toast('Name is required', 'error');
+    if (!form.phone.trim()) {
+      setPhoneError('Phone number is required');
+      return;
+    }
     if (!form.due_date) return toast('Due date is required', 'error');
 
     setLoading(true);
@@ -47,6 +69,7 @@ export default function AddMemberModal({ onClose, onAdded }) {
   return (
     <Modal title="Add New Member" onClose={onClose}>
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+
         <Field label="Full Name" required>
           <Input
             value={form.name}
@@ -57,13 +80,19 @@ export default function AddMemberModal({ onClose, onAdded }) {
         </Field>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-          <Field label="Phone">
+          <Field label="Phone" required>
             <Input
               value={form.phone}
               onChange={e => set('phone', e.target.value)}
               placeholder="9876543210"
               type="tel"
+              style={{ borderColor: phoneError ? 'var(--danger)' : undefined }}
             />
+            {phoneError && (
+              <span style={{ color: 'var(--danger)', fontSize: '12px', marginTop: '2px' }}>
+                {phoneError}
+              </span>
+            )}
           </Field>
           <Field label="Email">
             <Input
@@ -76,7 +105,10 @@ export default function AddMemberModal({ onClose, onAdded }) {
         </div>
 
         <Field label="Subscription Type" required>
-          <Select value={form.subscription_type} onChange={e => set('subscription_type', e.target.value)}>
+          <Select
+            value={form.subscription_type}
+            onChange={e => set('subscription_type', e.target.value)}
+          >
             <option value="monthly">Monthly (30 days)</option>
             <option value="quarterly">Quarterly (90 days)</option>
             <option value="yearly">Yearly (365 days)</option>
@@ -84,19 +116,22 @@ export default function AddMemberModal({ onClose, onAdded }) {
         </Field>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <Field label="Join Date" required>
+            <Input
+              type="date"
+              value={form.join_date}
+              onChange={e => set('join_date', e.target.value)}
+            />
+          </Field>
           <Field label="Due Date" required>
             <Input
               type="date"
               value={form.due_date}
               onChange={e => set('due_date', e.target.value)}
             />
-          </Field>
-          <Field label="Joined Date">
-            <Input
-              type="date"
-              value={form.joined_date}
-              onChange={e => set('joined_date', e.target.value)}
-            />
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+              Auto-calculated · editable
+            </span>
           </Field>
         </div>
 

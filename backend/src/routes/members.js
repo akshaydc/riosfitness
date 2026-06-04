@@ -36,7 +36,7 @@ router.get('/stats/summary', async (req, res) => {
 });
 
 router.get('/', async (req, res) => {
-  const { search, status, due_filter } = req.query;
+  const { search, status, due_filter, subscription_type } = req.query;
   try {
     let where = [];
     let params = [];
@@ -66,6 +66,12 @@ router.get('/', async (req, res) => {
       where.push(`(m.status = 'active' AND m.due_date < CURRENT_DATE)`);
     } else if (due_filter === 'due_soon') {
       where.push(`(m.status = 'active' AND m.due_date BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '7 days')`);
+    }
+
+    if (subscription_type && subscription_type !== 'all') {
+      where.push(`m.subscription_type = $${idx}`);
+      params.push(subscription_type);
+      idx++;
     }
 
     const whereClause = where.length ? `WHERE ${where.join(' AND ')}` : '';
@@ -107,16 +113,29 @@ router.get('/:id', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const { name, phone, email, subscription_type, due_date, joined_date, notes } = req.body;
-  if (!name || !subscription_type || !due_date) {
-    return res.status(400).json({ error: 'name, subscription_type, and due_date are required' });
+  const { name, phone, email, subscription_type, due_date, join_date, joined_date, notes } = req.body;
+  if (!name || !subscription_type) {
+    return res.status(400).json({ error: 'name and subscription_type are required' });
   }
+
+  const today = new Date().toISOString().split('T')[0];
+  const joinDate = join_date || joined_date || today;
+
+  let dueDate = due_date;
+  if (!dueDate) {
+    const subMap = { monthly: 30, quarterly: 90, yearly: 365 };
+    const days = subMap[subscription_type] || 30;
+    const d = new Date(joinDate);
+    d.setDate(d.getDate() + days);
+    dueDate = d.toISOString().split('T')[0];
+  }
+
   try {
     const { rows } = await pool.query(
       `INSERT INTO members (name, phone, email, subscription_type, due_date, joined_date, notes)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING *`,
-      [name, phone || null, email || null, subscription_type, due_date, joined_date || new Date().toISOString().split('T')[0], notes || null]
+      [name, phone || null, email || null, subscription_type, dueDate, joinDate, notes || null]
     );
     res.status(201).json(rows[0]);
   } catch (err) {

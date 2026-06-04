@@ -34,7 +34,7 @@ export default function PaymentModal({ member, onClose, onPaid }) {
         payment_method: form.payment_method,
         note: form.note || undefined,
       });
-      toast(`Payment recorded! Due extended to ${fmtDate(result.new_due_date)}`);
+      toast(`Payment added! Due extended to ${fmtDate(result.new_due_date)}`);
       onPaid();
     } catch (err) {
       toast(err.message || 'Payment failed', 'error');
@@ -44,7 +44,7 @@ export default function PaymentModal({ member, onClose, onPaid }) {
   }
 
   return (
-    <Modal title="Record Payment" onClose={onClose}>
+    <Modal title="Add Payment" onClose={onClose}>
       <div style={{
         background: 'linear-gradient(135deg, #f0f4ff, #f8f9fa)',
         border: '1px solid var(--border)',
@@ -118,7 +118,7 @@ export default function PaymentModal({ member, onClose, onPaid }) {
         <ModalActions>
           <Btn type="button" variant="ghost" onClick={onClose}>Cancel</Btn>
           <Btn type="submit" variant="green" disabled={loading}>
-            {loading ? 'Recording…' : 'Record Payment'}
+            {loading ? 'Adding…' : 'Add Payment'}
           </Btn>
         </ModalActions>
       </form>

@@ -16,6 +16,22 @@ const TABS = [
   { id: 'cancelled', label: 'Cancelled' },
 ];
 
+const filterSelectStyle = (active) => ({
+  padding: '7px 10px',
+  background: active ? 'var(--navy)' : 'var(--surface)',
+  color: active ? '#ffffff' : 'var(--text-dim)',
+  border: `1px solid ${active ? 'var(--navy)' : 'var(--border)'}`,
+  borderRadius: 'var(--radius-sm)',
+  fontSize: '13px',
+  fontWeight: 500,
+  cursor: 'pointer',
+  outline: 'none',
+  boxShadow: 'var(--shadow-sm)',
+  minWidth: 130,
+  fontFamily: 'inherit',
+  transition: 'all 0.15s',
+});
+
 export default function MembersView({ user }) {
   const toast = useToast();
   const [members, setMembers] = useState([]);
@@ -23,6 +39,8 @@ export default function MembersView({ user }) {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState('all');
+  const [filterSub, setFilterSub] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
   const [showAdd, setShowAdd] = useState(false);
   const [paymentMember, setPaymentMember] = useState(null);
   const [detailMemberId, setDetailMemberId] = useState(null);
@@ -30,9 +48,12 @@ export default function MembersView({ user }) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
+      // Status dropdown overrides tab when set; otherwise tab applies
+      const effectiveStatus = filterStatus || (activeTab !== 'all' ? activeTab : undefined);
       const params = {
         search: search || undefined,
-        status: activeTab !== 'all' ? activeTab : undefined,
+        status: effectiveStatus,
+        subscription_type: filterSub || undefined,
       };
       const [m, s] = await Promise.all([api.getMembers(params), api.getStats()]);
       setMembers(m);
@@ -42,7 +63,7 @@ export default function MembersView({ user }) {
     } finally {
       setLoading(false);
     }
-  }, [search, activeTab]);
+  }, [search, activeTab, filterSub, filterStatus]);
 
   useEffect(() => {
     const t = setTimeout(load, search ? 300 : 0);
@@ -53,6 +74,8 @@ export default function MembersView({ user }) {
     const s = dueDateStatus(member);
     return <Badge type={s} />;
   }
+
+  const hasActiveFilters = filterSub || filterStatus;
 
   return (
     <div>
@@ -87,18 +110,20 @@ export default function MembersView({ user }) {
         </div>
       )}
 
+      {/* Tab filters */}
       <div className="tabs">
         {TABS.map(tab => (
           <button
             key={tab.id}
             className={`tab ${activeTab === tab.id ? 'active' : ''}`}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => { setActiveTab(tab.id); setFilterStatus(''); }}
           >
             {tab.label}
           </button>
         ))}
       </div>
 
+      {/* Search + dropdown filters */}
       <div className="controls-row">
         <div className="search-wrap">
           <Icon name="search" />
@@ -109,6 +134,40 @@ export default function MembersView({ user }) {
             onChange={e => setSearch(e.target.value)}
           />
         </div>
+
+        <select
+          value={filterSub}
+          onChange={e => setFilterSub(e.target.value)}
+          style={filterSelectStyle(!!filterSub)}
+        >
+          <option value="">All Types</option>
+          <option value="monthly">Monthly</option>
+          <option value="quarterly">Quarterly</option>
+          <option value="yearly">Yearly</option>
+        </select>
+
+        <select
+          value={filterStatus}
+          onChange={e => { setFilterStatus(e.target.value); setActiveTab('all'); }}
+          style={filterSelectStyle(!!filterStatus)}
+        >
+          <option value="">All Status</option>
+          <option value="active">Active</option>
+          <option value="cancelled">Cancelled</option>
+          <option value="due_soon">Due Soon</option>
+        </select>
+
+        {hasActiveFilters && (
+          <Btn
+            variant="ghost"
+            size="sm"
+            onClick={() => { setFilterSub(''); setFilterStatus(''); }}
+            style={{ color: 'var(--danger)', borderColor: 'rgba(220,53,69,0.3)' }}
+          >
+            <Icon name="x" />
+            Clear
+          </Btn>
+        )}
       </div>
 
       <div className="table-wrap">
@@ -171,7 +230,7 @@ export default function MembersView({ user }) {
                           variant="green"
                           size="sm"
                           onClick={() => setPaymentMember(m)}
-                          title="Record payment"
+                          title="Add payment"
                         >
                           <Icon name="dollar" />
                         </Btn>
