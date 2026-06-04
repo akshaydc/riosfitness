@@ -6,19 +6,22 @@ const navItems = [
   { id: 'reports',  label: 'Revenue Reports',  icon: 'trending', roles: ['super_admin'] },
 ];
 
-export default function Sidebar({ user, activeView, onNavigate, onLogout }) {
+export default function Sidebar({ user, activeView, onNavigate, onLogout, isDrawerOpen }) {
   const accessible = navItems.filter(item => item.roles.includes(user?.role));
   const roleLabel = user?.role === 'super_admin' ? 'Owner' : 'Admin';
 
   return (
-    <aside style={{
-      width: 224,
-      background: '#0f1f3d',
-      display: 'flex',
-      flexDirection: 'column',
-      height: '100vh',
-      flexShrink: 0,
-    }}>
+    <aside
+      className={`sidebar${isDrawerOpen ? ' drawer-open' : ''}`}
+      style={{
+        width: 224,
+        background: '#0f1f3d',
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100vh',
+        flexShrink: 0,
+      }}
+    >
       {/* Brand header */}
       <div style={{
         padding: '20px 16px',

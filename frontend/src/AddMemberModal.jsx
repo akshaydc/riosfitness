@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from './api';
-import { Modal, ModalActions, Btn, Field, Input, Select, useToast } from './components';
+import { Modal, ModalActions, Btn, Field, Input, Select, Icon, useToast } from './components';
 import ReceiptView from './ReceiptView';
 
 const SUB_DAYS = { monthly: 30, quarterly: 90, '6_months': 180, yearly: 365 };
@@ -21,6 +21,25 @@ function calcDueDate(joinDate, subType) {
   return d.toISOString().split('T')[0];
 }
 
+async function compressImage(dataUrl) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const maxDim = 400;
+      let { width: w, height: h } = img;
+      const ratio = Math.min(maxDim / w, maxDim / h, 1);
+      w = Math.round(w * ratio);
+      h = Math.round(h * ratio);
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/jpeg', 0.82));
+    };
+    img.src = dataUrl;
+  });
+}
+
 export default function AddMemberModal({ onClose, onAdded }) {
   const toast = useToast();
   const [loading, setLoading] = useState(false);
@@ -28,12 +47,17 @@ export default function AddMemberModal({ onClose, onAdded }) {
   const [photo, setPhoto] = useState('');
   const [receipt, setReceipt] = useState(null);
   const fileRef = useRef();
+  const cameraRef = useRef();
 
-  function handlePhotoFile(e) {
+  async function handlePhotoFile(e) {
     const file = e.target.files?.[0];
     if (!file) return;
+    e.target.value = '';
     const reader = new FileReader();
-    reader.onload = (ev) => setPhoto(ev.target.result);
+    reader.onload = async (ev) => {
+      const compressed = await compressImage(ev.target.result);
+      setPhoto(compressed);
+    };
     reader.readAsDataURL(file);
   }
 
@@ -91,13 +115,14 @@ export default function AddMemberModal({ onClose, onAdded }) {
         timing: form.timing || undefined,
       };
       const result = await api.addMember(payload);
-      onAdded(); // refresh list
+      onAdded();
 
       if (result.receipt_id) {
         setReceipt({
           id: result.receipt_id,
           member_name: result.name,
           membership_id: result.membership_id,
+          subscription_type: form.subscription_type,
           amount: parseFloat(form.amount_paid),
           method: form.payment_method,
           paid_date: new Date().toISOString().split('T')[0],
@@ -150,12 +175,23 @@ export default function AddMemberModal({ onClose, onAdded }) {
           <div>
             <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-dim)', marginBottom: 4 }}>Member Photo</div>
             <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: 8 }}>Optional · JPG or PNG</div>
-            <div style={{ display: 'flex', gap: 6 }}>
-              <Btn type="button" variant="ghost" size="sm" onClick={() => fileRef.current.click()}>Upload</Btn>
-              {photo && <Btn type="button" variant="ghost" size="sm" onClick={() => setPhoto('')} style={{ color: 'var(--danger)' }}>Remove</Btn>}
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              <Btn type="button" variant="ghost" size="sm" onClick={() => fileRef.current.click()}>
+                Upload Photo
+              </Btn>
+              <Btn type="button" variant="ghost" size="sm" onClick={() => cameraRef.current.click()}>
+                <Icon name="camera" />
+                Take Photo
+              </Btn>
+              {photo && (
+                <Btn type="button" variant="ghost" size="sm" onClick={() => setPhoto('')} style={{ color: 'var(--danger)' }}>
+                  Remove
+                </Btn>
+              )}
             </div>
           </div>
           <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoFile} />
+          <input ref={cameraRef} type="file" accept="image/*" capture="user" style={{ display: 'none' }} onChange={handlePhotoFile} />
         </div>
 
         <Field label="Full Name" required>
@@ -167,7 +203,7 @@ export default function AddMemberModal({ onClose, onAdded }) {
           />
         </Field>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+        <div className="form-row-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
           <Field label="Phone" required>
             <Input
               value={form.phone}
@@ -190,7 +226,7 @@ export default function AddMemberModal({ onClose, onAdded }) {
           </Field>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+        <div className="form-row-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
           <Field label="Subscription Type" required>
             <Select value={form.subscription_type} onChange={e => set('subscription_type', e.target.value)}>
               <option value="monthly">Monthly</option>
@@ -207,7 +243,7 @@ export default function AddMemberModal({ onClose, onAdded }) {
           </Field>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+        <div className="form-row-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
           <Field label="Join Date" required>
             <Input type="date" value={form.join_date} onChange={e => set('join_date', e.target.value)} />
           </Field>
@@ -217,11 +253,10 @@ export default function AddMemberModal({ onClose, onAdded }) {
           </Field>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+        <div className="form-row-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
           <Field label="Membership Fee (₹)">
             <Input
-              type="number"
-              min="0"
+              type="number" min="0"
               value={form.subscription_fee}
               onChange={e => set('subscription_fee', e.target.value)}
               placeholder="1000"
@@ -229,8 +264,7 @@ export default function AddMemberModal({ onClose, onAdded }) {
           </Field>
           <Field label="Amount Paid Now (₹)">
             <Input
-              type="number"
-              min="0"
+              type="number" min="0"
               value={form.amount_paid}
               onChange={e => set('amount_paid', e.target.value)}
               placeholder="0"

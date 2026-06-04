@@ -55,8 +55,8 @@ router.post('/', async (req, res) => {
     const recordedBy = receiptUser?.name || 'Staff';
 
     await client.query(
-      `INSERT INTO receipts (id, payment_id, member_id, member_name, membership_id, amount, method, paid_date, recorded_by, new_due_date, note, receipt_data)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      `INSERT INTO receipts (id, payment_id, member_id, member_name, membership_id, amount, method, paid_date, recorded_by, new_due_date, note, receipt_data, subscription_type)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
        ON CONFLICT (id) DO NOTHING`,
       [
         receiptId, payment.id, member_id, member.name, membershipId,
@@ -64,6 +64,7 @@ router.post('/', async (req, res) => {
         today.toISOString().split('T')[0],
         recordedBy, newDue, note || null,
         JSON.stringify({ receiptId, memberName: member.name, membershipId, amount, method: payment_method || 'Cash', paidDate: today.toISOString().split('T')[0], recordedBy, newDueDate: newDue, note: note || null }),
+        member.subscription_type || null,
       ]
     );
 

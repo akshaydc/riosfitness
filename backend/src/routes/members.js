@@ -297,12 +297,13 @@ router.post('/', async (req, res) => {
 
     await client.query(
       `INSERT INTO receipts (id, payment_id, member_id, member_name, membership_id,
-                             amount, method, paid_date, recorded_by, new_due_date, note, receipt_data)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+                             amount, method, paid_date, recorded_by, new_due_date, note, receipt_data, subscription_type)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
        ON CONFLICT (id) DO NOTHING`,
       [receiptId, payment.id, member.id, member.name, membershipId,
        paidAmount, payment_method || 'Cash', todayStr, recordedBy, dueDate, 'Initial payment',
-       JSON.stringify({ receiptId, memberName: member.name, membershipId, amount: paidAmount })]
+       JSON.stringify({ receiptId, memberName: member.name, membershipId, amount: paidAmount }),
+       subscription_type || null]
     );
 
     await client.query('COMMIT');

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { api } from './api';
 import {
   Modal, ModalActions, Btn, Badge, Avatar, Spinner, EmptyState,
@@ -16,6 +16,25 @@ function dateStr(d) {
   return String(d).split('T')[0];
 }
 
+async function compressImage(dataUrl) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const maxDim = 400;
+      let { width: w, height: h } = img;
+      const ratio = Math.min(maxDim / w, maxDim / h, 1);
+      w = Math.round(w * ratio);
+      h = Math.round(h * ratio);
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/jpeg', 0.82));
+    };
+    img.src = dataUrl;
+  });
+}
+
 export default function MemberDetailModal({ memberId, user, onClose, onUpdate, onPayment }) {
   const toast = useToast();
   const [member, setMember] = useState(null);
@@ -26,6 +45,9 @@ export default function MemberDetailModal({ memberId, user, onClose, onUpdate, o
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState({});
   const [saving, setSaving] = useState(false);
+  const [editPhoto, setEditPhoto] = useState(undefined); // undefined = not changed
+  const photoRef = useRef();
+  const cameraRef = useRef();
 
   useEffect(() => {
     api.getMember(memberId)
@@ -37,6 +59,18 @@ export default function MemberDetailModal({ memberId, user, onClose, onUpdate, o
       .then(setReceipts)
       .catch(() => {});
   }, [memberId]);
+
+  async function handleEditPhotoFile(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      const compressed = await compressImage(ev.target.result);
+      setEditPhoto(compressed);
+    };
+    reader.readAsDataURL(file);
+  }
 
   function startEdit() {
     setEditForm({
@@ -51,6 +85,7 @@ export default function MemberDetailModal({ memberId, user, onClose, onUpdate, o
       status: member.status,
       notes: member.notes || '',
     });
+    setEditPhoto(undefined);
     setEditing(true);
   }
 
@@ -62,9 +97,16 @@ export default function MemberDetailModal({ memberId, user, onClose, onUpdate, o
     if (!editForm.name?.trim()) return toast('Name is required', 'error');
     setSaving(true);
     try {
+      if (editPhoto !== undefined) {
+        await api.updateMemberPhoto(memberId, editPhoto || null);
+      }
       const updated = await api.updateMember(memberId, editForm);
-      setMember(prev => ({ ...prev, ...updated }));
+      setMember(prev => ({
+        ...prev, ...updated,
+        photo: editPhoto !== undefined ? editPhoto : prev.photo,
+      }));
       setEditing(false);
+      setEditPhoto(undefined);
       toast('Member updated');
       onUpdate();
     } catch (err) {
@@ -89,6 +131,7 @@ export default function MemberDetailModal({ memberId, user, onClose, onUpdate, o
   }
 
   const status = member ? dueDateStatus(member) : null;
+  const displayPhoto = editPhoto !== undefined ? editPhoto : member?.photo;
 
   return (
     <>
@@ -101,6 +144,7 @@ export default function MemberDetailModal({ memberId, user, onClose, onUpdate, o
           <EmptyState message="Member not found" />
         ) : (
           <>
+            {/* Member header */}
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', marginBottom: '20px' }}>
               <Avatar name={member.name} size={48} photo={member.photo} />
               <div style={{ flex: 1 }}>
@@ -126,10 +170,48 @@ export default function MemberDetailModal({ memberId, user, onClose, onUpdate, o
             {editing ? (
               /* ── Edit Form ── */
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '20px' }}>
+
+                {/* Photo upload in edit mode */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                  <div
+                    onClick={() => photoRef.current.click()}
+                    style={{
+                      width: 64, height: 64, borderRadius: '50%', overflow: 'hidden',
+                      flexShrink: 0, cursor: 'pointer',
+                      border: '2px dashed var(--border-strong)', background: 'var(--surface2)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}
+                  >
+                    {displayPhoto
+                      ? <img src={displayPhoto} alt="photo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : <Avatar name={member.name} size={60} />
+                    }
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: 6 }}>Member Photo</div>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      <Btn type="button" variant="ghost" size="sm" onClick={() => photoRef.current.click()}>
+                        Upload Photo
+                      </Btn>
+                      <Btn type="button" variant="ghost" size="sm" onClick={() => cameraRef.current.click()}>
+                        <Icon name="camera" />
+                        Take Photo
+                      </Btn>
+                      {(editPhoto || member.photo) && (
+                        <Btn type="button" variant="ghost" size="sm" onClick={() => setEditPhoto('')} style={{ color: 'var(--danger)' }}>
+                          Remove
+                        </Btn>
+                      )}
+                    </div>
+                  </div>
+                  <input ref={photoRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleEditPhotoFile} />
+                  <input ref={cameraRef} type="file" accept="image/*" capture="user" style={{ display: 'none' }} onChange={handleEditPhotoFile} />
+                </div>
+
                 <Field label="Full Name" required>
                   <Input value={editForm.name} onChange={e => setEdit('name', e.target.value)} />
                 </Field>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className="form-row-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <Field label="Phone">
                     <Input type="tel" value={editForm.phone} onChange={e => setEdit('phone', e.target.value)} placeholder="9876543210" />
                   </Field>
@@ -137,7 +219,7 @@ export default function MemberDetailModal({ memberId, user, onClose, onUpdate, o
                     <Input type="email" value={editForm.email} onChange={e => setEdit('email', e.target.value)} placeholder="member@example.com" />
                   </Field>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className="form-row-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <Field label="Subscription Type">
                     <Select value={editForm.subscription_type} onChange={e => setEdit('subscription_type', e.target.value)}>
                       <option value="monthly">Monthly</option>
@@ -153,7 +235,7 @@ export default function MemberDetailModal({ memberId, user, onClose, onUpdate, o
                     </Select>
                   </Field>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className="form-row-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <Field label="Join Date">
                     <Input type="date" value={editForm.join_date} onChange={e => setEdit('join_date', e.target.value)} />
                   </Field>
@@ -161,7 +243,7 @@ export default function MemberDetailModal({ memberId, user, onClose, onUpdate, o
                     <Input type="date" value={editForm.due_date} onChange={e => setEdit('due_date', e.target.value)} />
                   </Field>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className="form-row-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <Field label="Membership Fee (₹)">
                     <Input type="number" min="0" value={editForm.subscription_fee} onChange={e => setEdit('subscription_fee', e.target.value)} placeholder="1000" />
                   </Field>
@@ -176,7 +258,7 @@ export default function MemberDetailModal({ memberId, user, onClose, onUpdate, o
                   <Input value={editForm.notes} onChange={e => setEdit('notes', e.target.value)} placeholder="Any additional notes…" />
                 </Field>
                 <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                  <Btn variant="ghost" size="sm" onClick={() => setEditing(false)} disabled={saving}>Cancel</Btn>
+                  <Btn variant="ghost" size="sm" onClick={() => { setEditing(false); setEditPhoto(undefined); }} disabled={saving}>Cancel</Btn>
                   <Btn variant="primary" size="sm" onClick={handleSave} disabled={saving}>
                     {saving ? 'Saving…' : 'Save Changes'}
                   </Btn>
@@ -184,7 +266,7 @@ export default function MemberDetailModal({ memberId, user, onClose, onUpdate, o
               </div>
             ) : (
               /* ── Info Grid ── */
-              <div style={{
+              <div className="form-row-2" style={{
                 display: 'grid',
                 gridTemplateColumns: '1fr 1fr',
                 gap: '12px',
@@ -311,6 +393,7 @@ export default function MemberDetailModal({ memberId, user, onClose, onUpdate, o
                           id: r.id,
                           member_name: r.member_name,
                           membership_id: r.membership_id,
+                          subscription_type: r.subscription_type,
                           amount: r.amount,
                           method: r.method,
                           paid_date: r.paid_date,

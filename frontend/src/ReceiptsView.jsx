@@ -11,6 +11,7 @@ function formatReceipt(r) {
     id: r.id,
     member_name: r.member_name,
     membership_id: r.membership_id,
+    subscription_type: r.subscription_type,
     amount: r.amount,
     method: r.method,
     paid_date: r.paid_date,
@@ -145,8 +146,8 @@ export default function ReceiptsView() {
         </Btn>
       </div>
 
-      {/* Table */}
-      <div className="table-wrap">
+      {/* Desktop table */}
+      <div className="table-wrap receipts-table-section">
         {loading ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: '48px' }}>
             <Spinner />
@@ -203,6 +204,52 @@ export default function ReceiptsView() {
             </tbody>
           </table>
         )}
+      </div>
+
+      {/* Mobile cards */}
+      <div className="receipts-cards-section" style={{ display: 'none' }}>
+        {loading ? (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '48px' }}>
+            <Spinner />
+          </div>
+        ) : !receipts.length ? (
+          <EmptyState icon="receipt" message="No receipts found" />
+        ) : receipts.map(r => (
+          <div
+            key={r.id}
+            onClick={() => openReceipt(r)}
+            style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius)',
+              padding: '14px',
+              boxShadow: 'var(--shadow-sm)',
+              cursor: 'pointer',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: '15px', color: 'var(--navy)' }}>{r.member_name}</div>
+                <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'monospace', marginTop: 2 }}>{r.id}</div>
+              </div>
+              <div style={{ fontWeight: 800, fontSize: '16px', color: 'var(--navy)', flexShrink: 0, marginLeft: 8 }}>
+                {fmtCurrency(r.amount)}
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
+              <Badge type={r.method} />
+              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{fmtDate(r.paid_date)}</span>
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }} onClick={e => e.stopPropagation()}>
+              <Btn variant="ghost" size="sm" style={{ flex: 1, justifyContent: 'center' }} onClick={() => openReceipt(r)}>
+                <Icon name="eye" /> View
+              </Btn>
+              <Btn variant="ghost" size="sm" style={{ flex: 1, justifyContent: 'center' }} onClick={() => downloadReceipt(r)}>
+                Download
+              </Btn>
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Pagination */}

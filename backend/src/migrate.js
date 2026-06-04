@@ -82,6 +82,13 @@ async function migrate() {
       CREATE UNIQUE INDEX IF NOT EXISTS idx_members_membership_id ON members(membership_id)
     `);
 
+    // Add subscription_type to receipts (tracks sub type at time of payment)
+    await client.query(`ALTER TABLE receipts ADD COLUMN IF NOT EXISTS subscription_type TEXT`);
+    await client.query(`
+      UPDATE receipts r SET subscription_type = m.subscription_type
+      FROM members m WHERE r.member_id = m.id AND r.subscription_type IS NULL
+    `);
+
     // Generate membership_ids for members that don't have one yet
     const { rows: needIds } = await client.query(
       `SELECT id, joined_date FROM members WHERE membership_id IS NULL ORDER BY id`

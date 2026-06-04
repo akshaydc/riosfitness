@@ -8,8 +8,8 @@ function BarChart({ data }) {
   const max = Math.max(...data.map(d => Number(d.total)));
 
   return (
-    <div style={{ padding: '20px 20px 12px' }}>
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: '12px', height: '160px' }}>
+    <div className="bar-chart-scroll" style={{ padding: '20px 20px 12px' }}>
+      <div className="bar-chart-inner" style={{ display: 'flex', alignItems: 'flex-end', gap: '12px', height: '160px' }}>
         {data.map((d, i) => {
           const pct = max > 0 ? (Number(d.total) / max) * 100 : 0;
           const isLast = i === data.length - 1;
@@ -82,7 +82,7 @@ export default function ReportsView() {
         <h1 className="page-title">Revenue Reports</h1>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px', marginBottom: '20px' }}>
+      <div className="reports-top-grid" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px', marginBottom: '20px' }}>
         <div style={{
           background: 'var(--surface)',
           border: '1px solid var(--border)',

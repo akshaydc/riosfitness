@@ -43,6 +43,7 @@ export default function PaymentModal({ member, user, onClose, onPaid }) {
         id: result.receipt_id || `RCT-${Date.now()}`,
         member_name: member.name,
         membership_id: member.membership_id || `#${String(member.id).padStart(4, '0')}`,
+        subscription_type: member.subscription_type,
         amount,
         method: form.payment_method,
         paid_date: new Date().toISOString().split('T')[0],

@@ -272,3 +272,116 @@ tbody tr:hover {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
+/* ─── Mobile responsive ──────────────────────────────────────────────────────── */
+
+.mobile-topbar { display: none; }
+
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 499;
+}
+.sidebar-backdrop.visible { display: block; }
+
+@media (max-width: 768px) {
+  html { overflow-x: hidden; }
+
+  .mobile-topbar {
+    display: flex;
+    align-items: center;
+    background: #0f1f3d;
+    padding: 0 16px;
+    height: 52px;
+    gap: 12px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    z-index: 400;
+  }
+
+  .sidebar {
+    position: fixed !important;
+    top: 0; left: 0;
+    height: 100vh !important;
+    z-index: 500;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+  }
+  .sidebar.drawer-open {
+    transform: translateX(0);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.35);
+  }
+
+  .layout {
+    height: calc(100vh - 52px) !important;
+    overflow: hidden;
+  }
+
+  .main-content { padding: 14px 16px 24px !important; }
+  .page-header { margin-bottom: 14px; }
+  .page-title { font-size: 18px; }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  /* Modal: full screen on mobile */
+  .modal-overlay {
+    padding: 0 !important;
+    align-items: flex-start !important;
+  }
+  .modal-inner {
+    max-width: 100% !important;
+    width: 100% !important;
+    max-height: 100dvh !important;
+    height: 100dvh !important;
+    border-radius: 0 !important;
+  }
+
+  /* 2-col form grids → 1 col */
+  .form-row-2 { grid-template-columns: 1fr !important; }
+
+  /* Members: table → cards */
+  .members-table-section { display: none !important; }
+  .members-cards-section {
+    display: flex !important;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  /* Receipts: table → cards */
+  .receipts-table-section { display: none !important; }
+  .receipts-cards-section {
+    display: flex !important;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  /* Reports */
+  .reports-top-grid { grid-template-columns: 1fr !important; }
+  .bar-chart-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .bar-chart-inner { min-width: 400px; }
+
+  /* Filter toolbar: wrap + full-width dropdowns */
+  .filter-toolbar { flex-wrap: wrap !important; }
+  .filter-toolbar > div:first-child {
+    width: 100% !important;
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
+  }
+  .filter-dropdown {
+    flex: 1 1 calc(50% - 4px) !important;
+    width: auto !important;
+    min-width: 100px;
+  }
+}
+
+@media (min-width: 769px) {
+  .members-cards-section,
+  .receipts-cards-section { display: none !important; }
+}

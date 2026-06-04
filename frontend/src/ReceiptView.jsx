@@ -1,6 +1,11 @@
 import { useEffect } from 'react';
 import { fmtDate, fmtCurrency } from './components';
 
+const SUB_LABELS = {
+  monthly: 'Monthly', quarterly: '3 Months',
+  '6_months': '6 Months', yearly: 'Annual', annual: 'Annual',
+};
+
 function GymLogo() {
   return (
     <div style={{
@@ -54,10 +59,11 @@ export default function ReceiptView({ receipt, onClose, autoPrint = false }) {
     { label: 'Receipt No.', value: receipt.id },
     { label: 'Member', value: receipt.member_name },
     { label: 'Membership ID', value: receipt.membership_id },
+    ...(receipt.subscription_type ? [{ label: 'Subscription', value: SUB_LABELS[receipt.subscription_type] || receipt.subscription_type }] : []),
     { label: 'Amount Paid', value: fmtCurrency(receipt.amount), large: true },
     { label: 'Payment Method', value: receipt.method },
     { label: 'Date', value: fmtDate(receipt.paid_date) },
-    ...(receipt.new_due_date ? [{ label: 'New Due Date', value: fmtDate(receipt.new_due_date) }] : []),
+    ...(receipt.new_due_date ? [{ label: 'Next Due Date', value: fmtDate(receipt.new_due_date) }] : []),
     { label: 'Recorded By', value: receipt.recorded_by },
     ...(receipt.note && receipt.note !== 'Initial payment' ? [{ label: 'Note', value: receipt.note }] : []),
   ];

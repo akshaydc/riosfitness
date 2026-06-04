@@ -291,7 +291,7 @@ export default function MembersView({ user }) {
       <NotifBanner members={dueSoonMembers} type="due_soon" />
 
       {/* Unified toolbar: search + filters + refresh */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
+      <div className="filter-toolbar" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
         <div style={{ position: 'relative', flex: '0 0 auto', width: '280px' }}>
           <span style={{
             position: 'absolute',
@@ -315,6 +315,7 @@ export default function MembersView({ user }) {
         </div>
 
         <select
+          className="filter-dropdown"
           value={filterSub}
           onChange={e => setFilterSub(e.target.value)}
           style={dropdownStyle(!!filterSub)}
@@ -327,6 +328,7 @@ export default function MembersView({ user }) {
         </select>
 
         <select
+          className="filter-dropdown"
           value={filterStatus}
           onChange={e => setFilterStatus(e.target.value)}
           style={dropdownStyle(!!filterStatus)}
@@ -339,6 +341,7 @@ export default function MembersView({ user }) {
         </select>
 
         <select
+          className="filter-dropdown"
           value={filterTiming}
           onChange={e => setFilterTiming(e.target.value)}
           style={dropdownStyle(!!filterTiming)}
@@ -355,7 +358,8 @@ export default function MembersView({ user }) {
         </Btn>
       </div>
 
-      <div className="table-wrap">
+      {/* Desktop table */}
+      <div className="table-wrap members-table-section">
         {loading ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: '48px' }}>
             <Spinner />
@@ -402,21 +406,11 @@ export default function MembersView({ user }) {
                   </td>
                   <td>
                     <div style={{ display: 'flex', gap: '6px' }} onClick={e => e.stopPropagation()}>
-                      <Btn
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setDetailMemberId(m.id)}
-                        title="View details"
-                      >
+                      <Btn variant="ghost" size="sm" onClick={() => setDetailMemberId(m.id)} title="View details">
                         <Icon name="eye" />
                       </Btn>
                       {m.status !== 'cancelled' && (
-                        <Btn
-                          variant="green"
-                          size="sm"
-                          onClick={() => setPaymentMember(m)}
-                          title="Add payment"
-                        >
+                        <Btn variant="green" size="sm" onClick={() => setPaymentMember(m)} title="Add payment">
                           <Icon name="dollar" />
                         </Btn>
                       )}
@@ -427,6 +421,62 @@ export default function MembersView({ user }) {
             </tbody>
           </table>
         )}
+      </div>
+
+      {/* Mobile cards */}
+      <div className="members-cards-section" style={{ display: 'none' }}>
+        {loading ? (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '48px' }}>
+            <Spinner />
+          </div>
+        ) : !members.length ? (
+          <EmptyState icon="users" message="No members found" />
+        ) : members.map(m => (
+          <div
+            key={m.id}
+            onClick={() => setDetailMemberId(m.id)}
+            style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius)',
+              padding: '14px',
+              boxShadow: 'var(--shadow-sm)',
+              cursor: 'pointer',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+              <Avatar name={m.name} size={40} photo={m.photo} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: '15px', color: 'var(--navy)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {m.name}
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace', marginTop: 2 }}>
+                  {m.membership_id || m.phone || '—'}
+                </div>
+              </div>
+              {getDueStatusBadge(m)}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
+              <Badge type={m.subscription_type} />
+              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Due {fmtDate(m.due_date)}</span>
+              {m.timing && (
+                <span style={{ fontSize: '11px', color: 'var(--text-dim)', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 4, padding: '2px 6px' }}>
+                  {m.timing}
+                </span>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }} onClick={e => e.stopPropagation()}>
+              <Btn variant="ghost" size="sm" style={{ flex: 1, justifyContent: 'center' }} onClick={() => setDetailMemberId(m.id)}>
+                <Icon name="eye" /> View
+              </Btn>
+              {m.status !== 'cancelled' && (
+                <Btn variant="green" size="sm" style={{ flex: 1, justifyContent: 'center' }} onClick={() => setPaymentMember(m)}>
+                  <Icon name="dollar" /> Pay
+                </Btn>
+              )}
+            </div>
+          </div>
+        ))}
       </div>
 
       {showAdd && (
