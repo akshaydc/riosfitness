@@ -106,7 +106,7 @@ export default function MembersView({ user }) {
 
       {/* Unified toolbar: search + filters + refresh */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
-        <div style={{ position: 'relative', flex: 1 }}>
+        <div style={{ position: 'relative', flex: '0 0 auto', width: '280px' }}>
           <span style={{
             position: 'absolute',
             left: '10px',

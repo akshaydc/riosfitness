@@ -272,16 +272,16 @@ const inputStyle = {
   transition: 'border-color 0.15s, box-shadow 0.15s',
 };
 
-export function Input({ ...props }) {
+export function Input({ style, ...props }) {
   return (
     <input
-      style={inputStyle}
+      style={{ ...inputStyle, ...style }}
       onFocus={e => {
         e.target.style.borderColor = 'var(--accent)';
         e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)';
       }}
       onBlur={e => {
-        e.target.style.borderColor = 'var(--border)';
+        e.target.style.borderColor = style?.borderColor || 'var(--border)';
         e.target.style.boxShadow = 'none';
       }}
       {...props}
