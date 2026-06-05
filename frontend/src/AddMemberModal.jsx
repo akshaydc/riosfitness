@@ -75,6 +75,7 @@ export default function AddMemberModal({ onClose, onAdded }) {
       timing: '',
       subscription_fee: String(DEFAULT_FEES[sub]),
       amount_paid: String(DEFAULT_FEES[sub]),
+      balance_pending: '0',
       payment_method: 'Cash',
     };
   });
@@ -112,6 +113,7 @@ export default function AddMemberModal({ onClose, onAdded }) {
         photo: photo || undefined,
         subscription_fee: parseInt(form.subscription_fee) || undefined,
         amount_paid: parseFloat(form.amount_paid) || 0,
+        balance_pending: parseInt(form.balance_pending) || 0,
         timing: form.timing || undefined,
       };
       const result = await api.addMember(payload);
@@ -129,6 +131,7 @@ export default function AddMemberModal({ onClose, onAdded }) {
           recorded_by: result.recorded_by || 'Staff',
           new_due_date: result.new_due_date || result.due_date,
           note: null,
+          balance_pending: parseInt(form.balance_pending) || 0,
         });
       } else {
         toast('Member added successfully');
@@ -271,6 +274,18 @@ export default function AddMemberModal({ onClose, onAdded }) {
             />
           </Field>
         </div>
+
+        <Field label="Balance Pending (₹)">
+          <Input
+            type="number" min="0"
+            value={form.balance_pending}
+            onChange={e => set('balance_pending', e.target.value)}
+            placeholder="0"
+          />
+          <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+            Enter any remaining balance the member owes
+          </span>
+        </Field>
 
         {parseFloat(form.amount_paid) > 0 && (
           <Field label="Payment Method">

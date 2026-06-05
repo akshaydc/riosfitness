@@ -82,6 +82,7 @@ export default function MemberDetailModal({ memberId, user, onClose, onUpdate, o
       join_date: dateStr(member.joined_date),
       due_date: dateStr(member.due_date),
       subscription_fee: member.subscription_fee || '',
+      balance_pending: member.balance_pending || 0,
       status: member.status,
       notes: member.notes || '',
     });
@@ -254,6 +255,12 @@ export default function MemberDetailModal({ memberId, user, onClose, onUpdate, o
                     </Select>
                   </Field>
                 </div>
+                <div className="form-row-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <Field label="Balance Pending (₹)">
+                    <Input type="number" min="0" value={editForm.balance_pending} onChange={e => setEdit('balance_pending', e.target.value)} placeholder="0" />
+                  </Field>
+                  <div />
+                </div>
                 <Field label="Notes">
                   <Input value={editForm.notes} onChange={e => setEdit('notes', e.target.value)} placeholder="Any additional notes…" />
                 </Field>
@@ -294,6 +301,20 @@ export default function MemberDetailModal({ memberId, user, onClose, onUpdate, o
                     <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--navy)' }}>{value}</div>
                   </div>
                 ))}
+                {/* Balance Pending — always shown with color coding */}
+                <div style={{
+                  background: Number(member.balance_pending) > 0 ? '#fff7ed' : '#f0fdf4',
+                  border: `1px solid ${Number(member.balance_pending) > 0 ? '#fed7aa' : '#bbf7d0'}`,
+                  borderRadius: 'var(--radius-sm)',
+                  padding: '10px 12px',
+                }}>
+                  <div style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 3, color: Number(member.balance_pending) > 0 ? '#92400e' : '#15803d' }}>
+                    Balance Pending
+                  </div>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: Number(member.balance_pending) > 0 ? '#c2410c' : '#15803d' }}>
+                    {Number(member.balance_pending) > 0 ? fmtCurrency(member.balance_pending) : '✓ Clear'}
+                  </div>
+                </div>
               </div>
             )}
 

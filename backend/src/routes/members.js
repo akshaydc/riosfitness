@@ -167,6 +167,7 @@ router.patch('/:id', async (req, res) => {
     join_date: 'joined_date',
     due_date: 'due_date',
     subscription_fee: 'subscription_fee',
+    balance_pending: 'balance_pending',
     status: 'status',
     notes: 'notes',
   };
@@ -204,7 +205,7 @@ router.post('/', async (req, res) => {
   const {
     name, phone, email, subscription_type,
     due_date, join_date, joined_date, notes, photo,
-    timing, subscription_fee, amount_paid, payment_method,
+    timing, subscription_fee, amount_paid, payment_method, balance_pending,
   } = req.body;
 
   if (!name || !subscription_type) {
@@ -242,11 +243,12 @@ router.post('/', async (req, res) => {
 
       const { rows } = await pool.query(
         `INSERT INTO members (name, phone, email, subscription_type, due_date, joined_date,
-                              notes, photo, timing, subscription_fee, membership_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                              notes, photo, timing, subscription_fee, membership_id, balance_pending)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
          RETURNING *`,
         [name, phone || null, email || null, subscription_type, dueDate, joinDate,
-         notes || null, photo || null, timing || null, subscription_fee || null, membershipId]
+         notes || null, photo || null, timing || null, subscription_fee || null, membershipId,
+         parseInt(balance_pending) || 0]
       );
       return res.status(201).json(rows[0]);
     } catch (err) {
@@ -273,11 +275,12 @@ router.post('/', async (req, res) => {
 
     const { rows: [member] } = await client.query(
       `INSERT INTO members (name, phone, email, subscription_type, due_date, joined_date,
-                            notes, photo, timing, subscription_fee, membership_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                            notes, photo, timing, subscription_fee, membership_id, balance_pending)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
        RETURNING *`,
       [name, phone || null, email || null, subscription_type, dueDate, joinDate,
-       notes || null, photo || null, timing || null, subscription_fee || null, membershipId]
+       notes || null, photo || null, timing || null, subscription_fee || null, membershipId,
+       parseInt(balance_pending) || 0]
     );
 
     const { rows: [payment] } = await client.query(
@@ -295,15 +298,16 @@ router.post('/', async (req, res) => {
     );
     const recordedBy = receiptUser?.name || 'Staff';
 
+    const initBalance = parseInt(balance_pending) || 0;
     await client.query(
       `INSERT INTO receipts (id, payment_id, member_id, member_name, membership_id,
-                             amount, method, paid_date, recorded_by, new_due_date, note, receipt_data, subscription_type)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+                             amount, method, paid_date, recorded_by, new_due_date, note, receipt_data, subscription_type, balance_pending)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
        ON CONFLICT (id) DO NOTHING`,
       [receiptId, payment.id, member.id, member.name, membershipId,
        paidAmount, payment_method || 'Cash', todayStr, recordedBy, dueDate, 'Initial payment',
        JSON.stringify({ receiptId, memberName: member.name, membershipId, amount: paidAmount }),
-       subscription_type || null]
+       subscription_type || null, initBalance]
     );
 
     await client.query('COMMIT');

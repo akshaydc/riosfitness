@@ -82,6 +82,12 @@ async function migrate() {
       CREATE UNIQUE INDEX IF NOT EXISTS idx_members_membership_id ON members(membership_id)
     `);
 
+    // Add balance_pending to members (running balance the member owes)
+    await client.query(`ALTER TABLE members ADD COLUMN IF NOT EXISTS balance_pending INTEGER DEFAULT 0`);
+
+    // Add balance_pending to receipts (point-in-time balance after payment)
+    await client.query(`ALTER TABLE receipts ADD COLUMN IF NOT EXISTS balance_pending INTEGER DEFAULT 0`);
+
     // Add subscription_type to receipts (tracks sub type at time of payment)
     await client.query(`ALTER TABLE receipts ADD COLUMN IF NOT EXISTS subscription_type TEXT`);
     await client.query(`

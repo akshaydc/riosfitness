@@ -64,6 +64,8 @@ export default function ReceiptView({ receipt, onClose, autoPrint = false }) {
     ...(receipt.note && receipt.note !== 'Initial payment' ? [{ label: 'Note', value: receipt.note }] : []),
   ];
 
+  const balancePending = receipt.balance_pending != null ? Number(receipt.balance_pending) : null;
+
   return (
     <div style={{
       position: 'fixed', inset: 0,
@@ -124,6 +126,26 @@ export default function ReceiptView({ receipt, onClose, autoPrint = false }) {
               <Row key={label} label={label} value={value} large={large} />
             ))}
           </div>
+
+          {balancePending !== null && (
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginTop: 12,
+              padding: '10px 14px',
+              borderRadius: 8,
+              background: balancePending === 0 ? '#dcfce7' : '#fff7ed',
+              border: `1px solid ${balancePending === 0 ? '#bbf7d0' : '#fed7aa'}`,
+            }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: balancePending === 0 ? '#15803d' : '#92400e' }}>
+                {balancePending === 0 ? 'Payment Status' : 'Balance Pending'}
+              </span>
+              <span style={{ fontSize: 14, fontWeight: 800, color: balancePending === 0 ? '#15803d' : '#c2410c' }}>
+                {balancePending === 0 ? '✓ Fully Paid' : fmtCurrency(balancePending)}
+              </span>
+            </div>
+          )}
 
           <div style={{ textAlign: 'center', marginTop: 18, fontSize: 11, color: '#adb5bd' }}>
             Thank you for your payment!

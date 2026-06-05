@@ -6,7 +6,7 @@ const router = express.Router();
 router.use(authenticate);
 
 router.post('/', async (req, res) => {
-  const { member_id, amount, payment_method, note } = req.body;
+  const { member_id, amount, payment_method, note, balance_pending } = req.body;
   if (!member_id || !amount) {
     return res.status(400).json({ error: 'member_id and amount are required' });
   }
@@ -40,9 +40,10 @@ router.post('/', async (req, res) => {
     base.setDate(base.getDate() + days);
     const newDue = base.toISOString().split('T')[0];
 
+    const newBalance = balance_pending != null ? parseInt(balance_pending) : 0;
     await client.query(
-      `UPDATE members SET due_date = $1, status = 'active', updated_at = NOW() WHERE id = $2`,
-      [newDue, member_id]
+      `UPDATE members SET due_date = $1, status = 'active', balance_pending = $2, updated_at = NOW() WHERE id = $3`,
+      [newDue, newBalance, member_id]
     );
 
     const today = new Date();
@@ -55,8 +56,8 @@ router.post('/', async (req, res) => {
     const recordedBy = receiptUser?.name || 'Staff';
 
     await client.query(
-      `INSERT INTO receipts (id, payment_id, member_id, member_name, membership_id, amount, method, paid_date, recorded_by, new_due_date, note, receipt_data, subscription_type)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      `INSERT INTO receipts (id, payment_id, member_id, member_name, membership_id, amount, method, paid_date, recorded_by, new_due_date, note, receipt_data, subscription_type, balance_pending)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
        ON CONFLICT (id) DO NOTHING`,
       [
         receiptId, payment.id, member_id, member.name, membershipId,
@@ -64,12 +65,12 @@ router.post('/', async (req, res) => {
         today.toISOString().split('T')[0],
         recordedBy, newDue, note || null,
         JSON.stringify({ receiptId, memberName: member.name, membershipId, amount, method: payment_method || 'Cash', paidDate: today.toISOString().split('T')[0], recordedBy, newDueDate: newDue, note: note || null }),
-        member.subscription_type || null,
+        member.subscription_type || null, newBalance,
       ]
     );
 
     await client.query('COMMIT');
-    res.status(201).json({ payment, new_due_date: newDue, receipt_id: receiptId, recorded_by: recordedBy });
+    res.status(201).json({ payment, new_due_date: newDue, receipt_id: receiptId, recorded_by: recordedBy, balance_pending: newBalance });
   } catch (err) {
     await client.query('ROLLBACK');
     console.error(err);

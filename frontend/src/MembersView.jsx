@@ -375,6 +375,7 @@ export default function MembersView({ user }) {
                 <th>Due Date</th>
                 <th>Status</th>
                 <th>Total Paid</th>
+                <th>Balance</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -403,6 +404,15 @@ export default function MembersView({ user }) {
                     <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--navy)' }}>
                       {fmtCurrency(m.total_paid)}
                     </span>
+                  </td>
+                  <td>
+                    {Number(m.balance_pending) > 0 ? (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontWeight: 700, fontSize: '13px', color: '#c2410c' }}>
+                        ⚠ {fmtCurrency(m.balance_pending)}
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: '13px', fontWeight: 600, color: '#15803d' }}>₹0</span>
+                    )}
                   </td>
                   <td>
                     <div style={{ display: 'flex', gap: '6px' }} onClick={e => e.stopPropagation()}>
@@ -462,6 +472,11 @@ export default function MembersView({ user }) {
               {m.timing && (
                 <span style={{ fontSize: '11px', color: 'var(--text-dim)', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 4, padding: '2px 6px' }}>
                   {m.timing}
+                </span>
+              )}
+              {Number(m.balance_pending) > 0 && (
+                <span style={{ fontSize: '12px', fontWeight: 700, color: '#c2410c', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 4, padding: '2px 7px' }}>
+                  ⚠ Balance: {fmtCurrency(m.balance_pending)}
                 </span>
               )}
             </div>

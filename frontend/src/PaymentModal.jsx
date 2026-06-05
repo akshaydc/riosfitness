@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { api } from './api';
 import { Modal, ModalActions, Btn, Field, Input, Select, Badge, fmtDate, fmtCurrency, useToast } from './components';
 import ReceiptView from './ReceiptView';
@@ -15,11 +15,27 @@ export default function PaymentModal({ member, user, onClose, onPaid }) {
   const toast = useToast();
   const [loading, setLoading] = useState(false);
   const [receipt, setReceipt] = useState(null);
+
+  const currentBalance = parseInt(member.balance_pending) || 0;
+  const defaultFee = AMOUNTS[member.subscription_type] || 1000;
+  const initialAmount = AMOUNTS[member.subscription_type] || 1200;
+
   const [form, setForm] = useState({
-    amount: String(AMOUNTS[member.subscription_type] || 1200),
+    amount: String(initialAmount),
     payment_method: 'Cash',
     note: '',
   });
+  const [balancePendingAfter, setBalancePendingAfter] = useState(
+    () => Math.max(0, currentBalance + defaultFee - initialAmount)
+  );
+  const [manualBalance, setManualBalance] = useState(false);
+
+  useEffect(() => {
+    if (!manualBalance) {
+      const amt = parseFloat(form.amount) || 0;
+      setBalancePendingAfter(Math.max(0, currentBalance + defaultFee - amt));
+    }
+  }, [form.amount, manualBalance]);
 
   function set(field, value) {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -37,6 +53,7 @@ export default function PaymentModal({ member, user, onClose, onPaid }) {
         amount,
         payment_method: form.payment_method,
         note: form.note || undefined,
+        balance_pending: balancePendingAfter,
       });
       onPaid();
       setReceipt({
@@ -50,6 +67,7 @@ export default function PaymentModal({ member, user, onClose, onPaid }) {
         recorded_by: result.recorded_by || user?.name || 'Staff',
         new_due_date: result.new_due_date,
         note: form.note || null,
+        balance_pending: balancePendingAfter,
       });
     } catch (err) {
       toast(err.message || 'Payment failed', 'error');
@@ -83,6 +101,23 @@ export default function PaymentModal({ member, user, onClose, onPaid }) {
             <Badge type={member.subscription_type} />
           </div>
 
+          {currentBalance > 0 && (
+            <div style={{
+              background: '#fff7ed',
+              border: '1px solid #fed7aa',
+              borderLeft: '4px solid #f97316',
+              borderRadius: 'var(--radius-sm)',
+              padding: '10px 14px',
+              marginBottom: '4px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}>
+              <span style={{ fontSize: '13px', fontWeight: 600, color: '#92400e' }}>Current Balance Pending</span>
+              <span style={{ fontSize: '15px', fontWeight: 800, color: '#c2410c' }}>{fmtCurrency(currentBalance)}</span>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <Field label="Amount (₹)" required>
               <Input
@@ -115,6 +150,20 @@ export default function PaymentModal({ member, user, onClose, onPaid }) {
                   </button>
                 ))}
               </div>
+            </Field>
+
+            <Field label="Balance Pending After Payment (₹)">
+              <Input
+                type="number"
+                min="0"
+                step="1"
+                value={String(balancePendingAfter)}
+                onChange={e => { setManualBalance(true); setBalancePendingAfter(Math.max(0, parseInt(e.target.value) || 0)); }}
+                placeholder="0"
+              />
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                Auto-calculated · editable
+              </span>
             </Field>
 
             <Field label="Payment Method" required>

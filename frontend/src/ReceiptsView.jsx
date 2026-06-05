@@ -18,6 +18,7 @@ function formatReceipt(r) {
     recorded_by: r.recorded_by,
     new_due_date: r.new_due_date,
     note: r.note,
+    balance_pending: r.balance_pending != null ? Number(r.balance_pending) : null,
   };
 }
 
