@@ -46,8 +46,56 @@ export default function MemberDetailModal({ memberId, user, onClose, onUpdate, o
   const [editForm, setEditForm] = useState({});
   const [saving, setSaving] = useState(false);
   const [editPhoto, setEditPhoto] = useState(undefined); // undefined = not changed
+  const [webcamActive, setWebcamActive] = useState(false);
   const photoRef = useRef();
   const cameraRef = useRef();
+  const streamRef = useRef(null);
+  const videoRef = useRef();
+  const canvasRef = useRef();
+
+  useEffect(() => {
+    return () => { if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop()); };
+  }, []);
+
+  useEffect(() => {
+    if (webcamActive && videoRef.current && streamRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+    }
+  }, [webcamActive]);
+
+  function isMobile() {
+    return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth < 768;
+  }
+
+  async function startWebcam() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      streamRef.current = stream;
+      setWebcamActive(true);
+    } catch {
+      toast('Camera access denied or not available', 'error');
+    }
+  }
+
+  function stopWebcam() {
+    if (streamRef.current) { streamRef.current.getTracks().forEach(t => t.stop()); streamRef.current = null; }
+    setWebcamActive(false);
+  }
+
+  async function capturePhoto() {
+    if (!videoRef.current) return;
+    const canvas = canvasRef.current;
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
+    canvas.getContext('2d').drawImage(videoRef.current, 0, 0);
+    const compressed = await compressImage(canvas.toDataURL('image/jpeg', 0.92));
+    setEditPhoto(compressed);
+    stopWebcam();
+  }
+
+  function handleTakePhoto() {
+    if (isMobile()) { cameraRef.current.click(); } else { startWebcam(); }
+  }
 
   useEffect(() => {
     api.getMember(memberId)
@@ -173,41 +221,60 @@ export default function MemberDetailModal({ memberId, user, onClose, onUpdate, o
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '20px' }}>
 
                 {/* Photo upload in edit mode */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                  <div
-                    onClick={() => photoRef.current.click()}
-                    style={{
-                      width: 64, height: 64, borderRadius: '50%', overflow: 'hidden',
-                      flexShrink: 0, cursor: 'pointer',
-                      border: '2px dashed var(--border-strong)', background: 'var(--surface2)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}
-                  >
-                    {displayPhoto
-                      ? <img src={displayPhoto} alt="photo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      : <Avatar name={member.name} size={60} />
-                    }
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: 6 }}>Member Photo</div>
-                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                      <Btn type="button" variant="ghost" size="sm" onClick={() => photoRef.current.click()}>
-                        Upload Photo
+                {webcamActive ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <video
+                      ref={videoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      style={{ width: '100%', maxWidth: 280, borderRadius: 8, background: '#000', display: 'block', maxHeight: 210, objectFit: 'cover' }}
+                    />
+                    <canvas ref={canvasRef} style={{ display: 'none' }} />
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <Btn type="button" variant="primary" size="sm" onClick={capturePhoto}>
+                        <Icon name="camera" /> Capture
                       </Btn>
-                      <Btn type="button" variant="ghost" size="sm" onClick={() => cameraRef.current.click()}>
-                        <Icon name="camera" />
-                        Take Photo
-                      </Btn>
-                      {(editPhoto || member.photo) && (
-                        <Btn type="button" variant="ghost" size="sm" onClick={() => setEditPhoto('')} style={{ color: 'var(--danger)' }}>
-                          Remove
-                        </Btn>
-                      )}
+                      <Btn type="button" variant="ghost" size="sm" onClick={stopWebcam}>Cancel</Btn>
                     </div>
                   </div>
-                  <input ref={photoRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleEditPhotoFile} />
-                  <input ref={cameraRef} type="file" accept="image/*" capture="user" style={{ display: 'none' }} onChange={handleEditPhotoFile} />
-                </div>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                    <div
+                      onClick={() => photoRef.current.click()}
+                      style={{
+                        width: 64, height: 64, borderRadius: '50%', overflow: 'hidden',
+                        flexShrink: 0, cursor: 'pointer',
+                        border: '2px dashed var(--border-strong)', background: 'var(--surface2)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}
+                    >
+                      {displayPhoto
+                        ? <img src={displayPhoto} alt="photo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        : <Avatar name={member.name} size={60} />
+                      }
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: 6 }}>Member Photo</div>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        <Btn type="button" variant="ghost" size="sm" onClick={() => photoRef.current.click()}>
+                          Upload Photo
+                        </Btn>
+                        <Btn type="button" variant="ghost" size="sm" onClick={handleTakePhoto}>
+                          <Icon name="camera" />
+                          Take Photo
+                        </Btn>
+                        {(editPhoto || member.photo) && (
+                          <Btn type="button" variant="ghost" size="sm" onClick={() => setEditPhoto('')} style={{ color: 'var(--danger)' }}>
+                            Remove
+                          </Btn>
+                        )}
+                      </div>
+                    </div>
+                    <input ref={photoRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleEditPhotoFile} />
+                    <input ref={cameraRef} type="file" accept="image/*" capture="user" style={{ display: 'none' }} onChange={handleEditPhotoFile} />
+                  </div>
+                )}
 
                 <Field label="Full Name" required>
                   <Input value={editForm.name} onChange={e => setEdit('name', e.target.value)} />

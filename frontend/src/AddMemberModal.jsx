@@ -46,8 +46,56 @@ export default function AddMemberModal({ onClose, onAdded }) {
   const [phoneError, setPhoneError] = useState('');
   const [photo, setPhoto] = useState('');
   const [receipt, setReceipt] = useState(null);
+  const [webcamActive, setWebcamActive] = useState(false);
   const fileRef = useRef();
   const cameraRef = useRef();
+  const streamRef = useRef(null);
+  const videoRef = useRef();
+  const canvasRef = useRef();
+
+  useEffect(() => {
+    return () => { if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop()); };
+  }, []);
+
+  useEffect(() => {
+    if (webcamActive && videoRef.current && streamRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+    }
+  }, [webcamActive]);
+
+  function isMobile() {
+    return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth < 768;
+  }
+
+  async function startWebcam() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      streamRef.current = stream;
+      setWebcamActive(true);
+    } catch {
+      toast('Camera access denied or not available', 'error');
+    }
+  }
+
+  function stopWebcam() {
+    if (streamRef.current) { streamRef.current.getTracks().forEach(t => t.stop()); streamRef.current = null; }
+    setWebcamActive(false);
+  }
+
+  async function capturePhoto() {
+    if (!videoRef.current) return;
+    const canvas = canvasRef.current;
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
+    canvas.getContext('2d').drawImage(videoRef.current, 0, 0);
+    const compressed = await compressImage(canvas.toDataURL('image/jpeg', 0.92));
+    setPhoto(compressed);
+    stopWebcam();
+  }
+
+  function handleTakePhoto() {
+    if (isMobile()) { cameraRef.current.click(); } else { startWebcam(); }
+  }
 
   async function handlePhotoFile(e) {
     const file = e.target.files?.[0];
@@ -153,49 +201,68 @@ export default function AddMemberModal({ onClose, onAdded }) {
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
         {/* Photo upload */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div
-            onClick={() => fileRef.current.click()}
-            style={{
-              width: 72, height: 72,
-              borderRadius: '50%',
-              border: '2px dashed var(--border-strong)',
-              cursor: 'pointer',
-              overflow: 'hidden',
-              flexShrink: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: 'var(--surface2)',
-            }}
-          >
-            {photo ? (
-              <img src={photo} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            ) : (
-              <span style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center', lineHeight: 1.3, padding: '0 6px' }}>
-                Add<br/>Photo
-              </span>
-            )}
-          </div>
-          <div>
-            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-dim)', marginBottom: 4 }}>Member Photo</div>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: 8 }}>Optional · JPG or PNG</div>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              <Btn type="button" variant="ghost" size="sm" onClick={() => fileRef.current.click()}>
-                Upload Photo
+        {webcamActive ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              style={{ width: '100%', maxWidth: 280, borderRadius: 8, background: '#000', display: 'block', maxHeight: 210, objectFit: 'cover' }}
+            />
+            <canvas ref={canvasRef} style={{ display: 'none' }} />
+            <div style={{ display: 'flex', gap: 6 }}>
+              <Btn type="button" variant="primary" size="sm" onClick={capturePhoto}>
+                <Icon name="camera" /> Capture
               </Btn>
-              <Btn type="button" variant="ghost" size="sm" onClick={() => cameraRef.current.click()}>
-                <Icon name="camera" />
-                Take Photo
-              </Btn>
-              {photo && (
-                <Btn type="button" variant="ghost" size="sm" onClick={() => setPhoto('')} style={{ color: 'var(--danger)' }}>
-                  Remove
-                </Btn>
-              )}
+              <Btn type="button" variant="ghost" size="sm" onClick={stopWebcam}>Cancel</Btn>
             </div>
           </div>
-          <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoFile} />
-          <input ref={cameraRef} type="file" accept="image/*" capture="user" style={{ display: 'none' }} onChange={handlePhotoFile} />
-        </div>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div
+              onClick={() => fileRef.current.click()}
+              style={{
+                width: 72, height: 72,
+                borderRadius: '50%',
+                border: '2px dashed var(--border-strong)',
+                cursor: 'pointer',
+                overflow: 'hidden',
+                flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'var(--surface2)',
+              }}
+            >
+              {photo ? (
+                <img src={photo} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center', lineHeight: 1.3, padding: '0 6px' }}>
+                  Add<br/>Photo
+                </span>
+              )}
+            </div>
+            <div>
+              <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-dim)', marginBottom: 4 }}>Member Photo</div>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: 8 }}>Optional · JPG or PNG</div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                <Btn type="button" variant="ghost" size="sm" onClick={() => fileRef.current.click()}>
+                  Upload Photo
+                </Btn>
+                <Btn type="button" variant="ghost" size="sm" onClick={handleTakePhoto}>
+                  <Icon name="camera" />
+                  Take Photo
+                </Btn>
+                {photo && (
+                  <Btn type="button" variant="ghost" size="sm" onClick={() => setPhoto('')} style={{ color: 'var(--danger)' }}>
+                    Remove
+                  </Btn>
+                )}
+              </div>
+            </div>
+            <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoFile} />
+            <input ref={cameraRef} type="file" accept="image/*" capture="user" style={{ display: 'none' }} onChange={handlePhotoFile} />
+          </div>
+        )}
 
         <Field label="Full Name" required>
           <Input
