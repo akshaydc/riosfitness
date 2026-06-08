@@ -73,4 +73,10 @@ export const api = {
 
   updateMember: (id, data) =>
     request(`/api/members/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+
+  updatePayment: (id, data) =>
+    request(`/api/payments/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+
+  deletePayment: (id) =>
+    request(`/api/payments/${id}`, { method: 'DELETE' }),
 };

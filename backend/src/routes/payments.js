@@ -104,6 +104,132 @@ router.get('/', async (req, res) => {
   }
 });
 
+router.patch('/:id', requireSuperAdmin, async (req, res) => {
+  const { id } = req.params;
+  const { amount, method, note } = req.body;
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const { rows: [existing] } = await client.query(
+      'SELECT * FROM payments WHERE id = $1',
+      [id]
+    );
+    if (!existing) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Payment not found' });
+    }
+
+    const setClauses = [];
+    const vals = [];
+    let n = 1;
+    if (amount != null) { setClauses.push(`amount = $${n++}`); vals.push(amount); }
+    if (method != null) { setClauses.push(`payment_method = $${n++}`); vals.push(method); }
+    if (note !== undefined) { setClauses.push(`note = $${n++}`); vals.push(note || null); }
+
+    if (!setClauses.length) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'No fields to update' });
+    }
+    vals.push(id);
+    const { rows: [updated] } = await client.query(
+      `UPDATE payments SET ${setClauses.join(', ')} WHERE id = $${n} RETURNING *`,
+      vals
+    );
+
+    const { rows: [receipt] } = await client.query(
+      'SELECT * FROM receipts WHERE payment_id = $1',
+      [id]
+    );
+    if (receipt) {
+      const rClauses = [];
+      const rVals = [];
+      let rn = 1;
+      if (amount != null) { rClauses.push(`amount = $${rn++}`); rVals.push(amount); }
+      if (method != null) { rClauses.push(`method = $${rn++}`); rVals.push(method); }
+      if (note !== undefined) { rClauses.push(`note = $${rn++}`); rVals.push(note || null); }
+
+      const data = typeof receipt.receipt_data === 'string'
+        ? JSON.parse(receipt.receipt_data)
+        : (receipt.receipt_data || {});
+      if (amount != null) data.amount = amount;
+      if (method != null) data.method = method;
+      if (note !== undefined) data.note = note || null;
+      rClauses.push(`receipt_data = $${rn++}`);
+      rVals.push(JSON.stringify(data));
+
+      rVals.push(id);
+      await client.query(
+        `UPDATE receipts SET ${rClauses.join(', ')} WHERE payment_id = $${rn}`,
+        rVals
+      );
+    }
+
+    await client.query('COMMIT');
+    res.json(updated);
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  } finally {
+    client.release();
+  }
+});
+
+router.delete('/:id', requireSuperAdmin, async (req, res) => {
+  const { id } = req.params;
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const { rows: [payment] } = await client.query(
+      'SELECT * FROM payments WHERE id = $1',
+      [id]
+    );
+    if (!payment) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Payment not found' });
+    }
+
+    const { rows: [receipt] } = await client.query(
+      'SELECT * FROM receipts WHERE payment_id = $1',
+      [id]
+    );
+
+    const { rows: [member] } = await client.query(
+      'SELECT * FROM members WHERE id = $1 FOR UPDATE',
+      [payment.member_id]
+    );
+
+    const subMap = { monthly: 30, quarterly: 90, '6_months': 180, yearly: 365, annual: 365 };
+    const subType = receipt?.subscription_type || member.subscription_type;
+    const days = subMap[subType] || 30;
+
+    const baseDue = member.due_date ? new Date(member.due_date) : new Date();
+    baseDue.setDate(baseDue.getDate() - days);
+    const newDue = baseDue.toISOString().split('T')[0];
+
+    if (receipt) {
+      await client.query('DELETE FROM receipts WHERE payment_id = $1', [id]);
+    }
+    await client.query('DELETE FROM payments WHERE id = $1', [id]);
+    await client.query(
+      'UPDATE members SET due_date = $1, updated_at = NOW() WHERE id = $2',
+      [newDue, payment.member_id]
+    );
+
+    await client.query('COMMIT');
+    res.json({ success: true, new_due_date: newDue });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  } finally {
+    client.release();
+  }
+});
+
 router.get('/revenue', requireSuperAdmin, async (req, res) => {
   try {
     const { rows: monthly } = await pool.query(`

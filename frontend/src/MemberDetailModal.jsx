@@ -40,6 +40,11 @@ export default function MemberDetailModal({ memberId, user, onClose, onUpdate, o
   const [member, setMember] = useState(null);
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
+  const [editingPaymentId, setEditingPaymentId] = useState(null);
+  const [editPaymentForm, setEditPaymentForm] = useState({});
+  const [savingPayment, setSavingPayment] = useState(false);
+  const [deletingPaymentId, setDeletingPaymentId] = useState(null);
+  const [hoveredPaymentId, setHoveredPaymentId] = useState(null);
   const [receipts, setReceipts] = useState([]);
   const [viewingReceipt, setViewingReceipt] = useState(null);
   const [editing, setEditing] = useState(false);
@@ -176,6 +181,56 @@ export default function MemberDetailModal({ memberId, user, onClose, onUpdate, o
       toast(err.message || 'Failed to cancel', 'error');
     } finally {
       setCancelling(false);
+    }
+  }
+
+  function startEditPayment(p) {
+    setEditingPaymentId(p.id);
+    setEditPaymentForm({ amount: p.amount, method: p.payment_method || 'Cash', note: p.note || '' });
+  }
+
+  async function handlePaymentSave() {
+    if (!editPaymentForm.amount) return toast('Amount is required', 'error');
+    setSavingPayment(true);
+    try {
+      await api.updatePayment(editingPaymentId, {
+        amount: Number(editPaymentForm.amount),
+        method: editPaymentForm.method,
+        note: editPaymentForm.note || null,
+      });
+      const [updatedMember, updatedReceipts] = await Promise.all([
+        api.getMember(memberId),
+        api.getMemberReceipts(memberId),
+      ]);
+      setMember(updatedMember);
+      setReceipts(updatedReceipts);
+      setEditingPaymentId(null);
+      toast('Payment updated');
+      onUpdate();
+    } catch (err) {
+      toast(err.message || 'Failed to update payment', 'error');
+    } finally {
+      setSavingPayment(false);
+    }
+  }
+
+  async function handlePaymentDelete(p) {
+    if (!confirm('Are you sure? This will remove the payment and receipt.')) return;
+    setDeletingPaymentId(p.id);
+    try {
+      await api.deletePayment(p.id);
+      const [updatedMember, updatedReceipts] = await Promise.all([
+        api.getMember(memberId),
+        api.getMemberReceipts(memberId),
+      ]);
+      setMember(updatedMember);
+      setReceipts(updatedReceipts);
+      toast('Payment deleted');
+      onUpdate();
+    } catch (err) {
+      toast(err.message || 'Failed to delete payment', 'error');
+    } finally {
+      setDeletingPaymentId(null);
     }
   }
 
@@ -417,27 +472,109 @@ export default function MemberDetailModal({ memberId, user, onClose, onUpdate, o
                   overflowY: 'auto',
                   background: 'var(--surface)',
                 }}>
-                  {member.payments.map(p => (
-                    <div key={p.id} style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '10px 14px',
-                      borderBottom: '1px solid var(--border)',
-                      gap: '12px',
-                    }}>
-                      <div>
-                        <div style={{ fontWeight: 600, fontSize: '14px' }}>{fmtCurrency(p.amount)}</div>
-                        <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: 1 }}>
-                          {fmtDate(p.paid_at)} · {p.recorded_by_name || 'Staff'}
-                        </div>
-                        {p.note && p.note !== 'Initial payment' && (
-                          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: 1 }}>{p.note}</div>
+                  {member.payments.map(p => {
+                    const isEditing = editingPaymentId === p.id;
+                    const mobile = isMobile();
+                    return (
+                      <div
+                        key={p.id}
+                        onMouseEnter={() => setHoveredPaymentId(p.id)}
+                        onMouseLeave={() => setHoveredPaymentId(null)}
+                        style={{
+                          borderBottom: '1px solid var(--border)',
+                          background: isEditing ? 'var(--surface2)' : undefined,
+                          transition: 'background 0.15s',
+                        }}
+                      >
+                        {isEditing ? (
+                          <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                              <Field label="Amount (₹)">
+                                <Input
+                                  type="number" min="0"
+                                  value={editPaymentForm.amount}
+                                  onChange={e => setEditPaymentForm(prev => ({ ...prev, amount: e.target.value }))}
+                                />
+                              </Field>
+                              <Field label="Method">
+                                <Select
+                                  value={editPaymentForm.method}
+                                  onChange={e => setEditPaymentForm(prev => ({ ...prev, method: e.target.value }))}
+                                >
+                                  <option value="Cash">Cash</option>
+                                  <option value="UPI">UPI</option>
+                                  <option value="Card">Card</option>
+                                  <option value="Bank Transfer">Bank Transfer</option>
+                                </Select>
+                              </Field>
+                            </div>
+                            <Field label="Note">
+                              <Input
+                                value={editPaymentForm.note}
+                                onChange={e => setEditPaymentForm(prev => ({ ...prev, note: e.target.value }))}
+                                placeholder="Optional note"
+                              />
+                            </Field>
+                            <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                              <Btn variant="ghost" size="sm" onClick={() => setEditingPaymentId(null)} disabled={savingPayment}>
+                                Cancel
+                              </Btn>
+                              <Btn variant="primary" size="sm" onClick={handlePaymentSave} disabled={savingPayment}>
+                                {savingPayment ? 'Saving…' : 'Save'}
+                              </Btn>
+                            </div>
+                          </div>
+                        ) : (
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '10px 14px',
+                            gap: '12px',
+                          }}>
+                            <div>
+                              <div style={{ fontWeight: 600, fontSize: '14px' }}>{fmtCurrency(p.amount)}</div>
+                              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: 1 }}>
+                                {fmtDate(p.paid_at)} · {p.recorded_by_name || 'Staff'}
+                              </div>
+                              {p.note && p.note !== 'Initial payment' && (
+                                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: 1 }}>{p.note}</div>
+                              )}
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                              <Badge type={p.payment_method} />
+                              {user?.role === 'super_admin' && (
+                                <div style={{
+                                  display: 'flex', gap: 3,
+                                  opacity: hoveredPaymentId === p.id || mobile ? 1 : 0,
+                                  transition: 'opacity 0.15s',
+                                  pointerEvents: hoveredPaymentId === p.id || mobile ? 'auto' : 'none',
+                                }}>
+                                  <Btn
+                                    variant="ghost" size="sm"
+                                    title="Edit payment"
+                                    onClick={() => startEditPayment(p)}
+                                    style={{ padding: '3px 6px', color: 'var(--navy)', minWidth: 0 }}
+                                  >
+                                    <Icon name="edit" />
+                                  </Btn>
+                                  <Btn
+                                    variant="ghost" size="sm"
+                                    title="Delete payment"
+                                    onClick={() => handlePaymentDelete(p)}
+                                    disabled={deletingPaymentId === p.id}
+                                    style={{ padding: '3px 6px', color: 'var(--danger)', minWidth: 0 }}
+                                  >
+                                    <Icon name="trash" />
+                                  </Btn>
+                                </div>
+                              )}
+                            </div>
+                          </div>
                         )}
                       </div>
-                      <Badge type={p.payment_method} />
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
