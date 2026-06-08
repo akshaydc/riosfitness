@@ -23,7 +23,8 @@ router.get('/stats/summary', async (req, res) => {
         COUNT(*) FILTER (WHERE status = 'cancelled') AS cancelled,
         COUNT(*) FILTER (WHERE status = 'active' AND due_date < CURRENT_DATE) AS overdue,
         COUNT(*) FILTER (WHERE status = 'active' AND due_date BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '7 days') AS due_soon,
-        COUNT(*) AS total
+        COUNT(*) AS total,
+        COUNT(*) FILTER (WHERE balance_pending > 0) AS balance_due_count
       FROM members
     `);
 
@@ -46,7 +47,7 @@ router.get('/stats/summary', async (req, res) => {
 });
 
 router.get('/', async (req, res) => {
-  const { search, status, due_filter, subscription_type, timing } = req.query;
+  const { search, status, due_filter, subscription_type, timing, has_balance } = req.query;
   try {
     let where = [];
     let params = [];
@@ -88,6 +89,10 @@ router.get('/', async (req, res) => {
       where.push(`m.timing = $${idx}`);
       params.push(timing);
       idx++;
+    }
+
+    if (has_balance === 'true') {
+      where.push('m.balance_pending > 0');
     }
 
     const whereClause = where.length ? `WHERE ${where.join(' AND ')}` : '';

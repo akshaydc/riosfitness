@@ -227,7 +227,7 @@ export function Badge({ type }) {
 }
 
 // ─── StatCard ─────────────────────────────────────────────────────────────────
-export function StatCard({ label, value, icon, accent = false, color }) {
+export function StatCard({ label, value, icon, accent = false, color, onClick, active = false }) {
   const iconBg = accent
     ? 'rgba(255,107,53,0.12)'
     : color === 'var(--green)' ? 'rgba(25,135,84,0.10)'
@@ -238,17 +238,23 @@ export function StatCard({ label, value, icon, accent = false, color }) {
   const iconColor = accent ? 'var(--accent)' : color || '#4b6cb7';
 
   return (
-    <div style={{
-      background: 'var(--surface)',
-      border: `1px solid ${accent ? 'rgba(255,107,53,0.25)' : 'var(--border)'}`,
-      borderRadius: 'var(--radius)',
-      borderLeft: accent ? '3px solid var(--accent)' : undefined,
-      padding: '18px 20px',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '12px',
-      boxShadow: 'var(--shadow-sm)',
-    }}>
+    <div
+      onClick={onClick}
+      style={{
+        background: 'var(--surface)',
+        border: active ? '2px solid var(--accent)' : `1px solid ${accent ? 'rgba(255,107,53,0.25)' : 'var(--border)'}`,
+        borderRadius: 'var(--radius)',
+        borderLeft: active ? undefined : (accent ? '3px solid var(--accent)' : undefined),
+        padding: active ? '17px 19px' : '18px 20px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '12px',
+        boxShadow: active ? '0 0 0 3px var(--accent-dim)' : 'var(--shadow-sm)',
+        cursor: onClick ? 'pointer' : 'default',
+        transition: 'box-shadow 0.15s, border-color 0.15s',
+        userSelect: 'none',
+      }}
+    >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
           {label}

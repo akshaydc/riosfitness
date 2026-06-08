@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { api } from './api';
 import {
   Btn, Icon, StatCard, Badge, Avatar, Spinner, EmptyState,
@@ -35,6 +35,7 @@ export default function MembersView({ user }) {
   const [filterSub, setFilterSub] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [filterTiming, setFilterTiming] = useState('');
+  const [filterBalance, setFilterBalance] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
@@ -42,6 +43,7 @@ export default function MembersView({ user }) {
   const [detailMemberId, setDetailMemberId] = useState(null);
 
   const [dismissedBanners, setDismissedBanners] = useState({ overdue: false, dueSoon: false });
+  const tableRef = useRef();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -58,6 +60,9 @@ export default function MembersView({ user }) {
       } else if (filterStatus) {
         params.status = filterStatus;
       }
+      if (filterBalance) {
+        params.has_balance = 'true';
+      }
       const [m, s] = await Promise.all([api.getMembers(params), api.getStats()]);
       setMembers(m);
       setStats(s);
@@ -66,7 +71,7 @@ export default function MembersView({ user }) {
     } finally {
       setLoading(false);
     }
-  }, [search, filterSub, filterStatus, filterTiming]);
+  }, [search, filterSub, filterStatus, filterTiming, filterBalance]);
 
   useEffect(() => {
     const t = setTimeout(load, search ? 300 : 0);
@@ -133,6 +138,40 @@ export default function MembersView({ user }) {
     const a = document.createElement('a'); a.href = url; a.download = 'members-template.csv'; a.click();
     URL.revokeObjectURL(url);
   }
+
+  const activeStatFilter = filterBalance
+    ? 'balance'
+    : (filterStatus === 'active' || filterStatus === 'overdue' || filterStatus === 'due_soon')
+      ? filterStatus
+      : null;
+
+  function handleStatClick(cardFilter) {
+    const isActive = activeStatFilter === cardFilter || (cardFilter === 'all' && !activeStatFilter);
+    if (isActive && cardFilter !== 'all') {
+      setFilterStatus('');
+      setFilterBalance(false);
+      return;
+    }
+    if (cardFilter === 'all') {
+      setFilterStatus('');
+      setFilterBalance(false);
+    } else if (cardFilter === 'balance') {
+      setFilterBalance(true);
+      setFilterStatus('');
+    } else {
+      setFilterStatus(cardFilter);
+      setFilterBalance(false);
+    }
+    setTimeout(() => tableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+  }
+
+  const FILTER_LABELS = {
+    all: 'All Members',
+    active: 'Active Members',
+    overdue: 'Overdue Members',
+    due_soon: 'Members Due This Week',
+    balance: 'Members with Balance Due',
+  };
 
   // Compute banner data from all members (unfiltered by tab/dropdown)
   const today = new Date(); today.setHours(0,0,0,0);
@@ -272,10 +311,31 @@ export default function MembersView({ user }) {
 
       {stats && (
         <div className="stats-grid">
-          <StatCard label="Total Members" value={stats.total} icon="users" />
-          <StatCard label="Active" value={stats.active} icon="check" color="var(--green)" />
-          <StatCard label="Overdue" value={stats.overdue} icon="alert" color="var(--danger)" />
-          <StatCard label="Due This Week" value={stats.due_soon} icon="calendar" color="var(--orange)" />
+          <StatCard
+            label="Total Members" value={stats.total} icon="users"
+            active={activeStatFilter === 'all'}
+            onClick={() => handleStatClick('all')}
+          />
+          <StatCard
+            label="Active" value={stats.active} icon="check" color="var(--green)"
+            active={activeStatFilter === 'active'}
+            onClick={() => handleStatClick('active')}
+          />
+          <StatCard
+            label="Overdue" value={stats.overdue} icon="alert" color="var(--danger)"
+            active={activeStatFilter === 'overdue'}
+            onClick={() => handleStatClick('overdue')}
+          />
+          <StatCard
+            label="Due This Week" value={stats.due_soon} icon="calendar" color="var(--orange)"
+            active={activeStatFilter === 'due_soon'}
+            onClick={() => handleStatClick('due_soon')}
+          />
+          <StatCard
+            label="Balance Due" value={stats.balance_due_count ?? 0} icon="alert" color="var(--orange)"
+            active={activeStatFilter === 'balance'}
+            onClick={() => handleStatClick('balance')}
+          />
           {user.role === 'super_admin' && (
             <StatCard
               label="Collected This Month"
@@ -290,6 +350,28 @@ export default function MembersView({ user }) {
       <NotifBanner members={overdueMembers} type="overdue" />
       <NotifBanner members={dueSoonMembers} type="due_soon" />
 
+      {/* Filter label + toolbar */}
+      <div ref={tableRef}>
+      {activeStatFilter && (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          marginBottom: '10px', padding: '8px 12px',
+          background: 'var(--accent-dim)',
+          border: '1px solid rgba(255,107,53,0.3)',
+          borderRadius: 'var(--radius-sm)',
+          animation: 'fadeIn 0.2s ease',
+        }}>
+          <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--accent)' }}>
+            Showing: {FILTER_LABELS[activeStatFilter]}
+          </span>
+          <button
+            onClick={() => { setFilterStatus(''); setFilterBalance(false); }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: 600, color: 'var(--accent)', padding: '2px 6px' }}
+          >
+            Clear ×
+          </button>
+        </div>
+      )}
       {/* Unified toolbar: search + filters + refresh */}
       <div className="filter-toolbar" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
         <div style={{ position: 'relative', flex: '0 0 auto', width: '280px' }}>
@@ -330,7 +412,7 @@ export default function MembersView({ user }) {
         <select
           className="filter-dropdown"
           value={filterStatus}
-          onChange={e => setFilterStatus(e.target.value)}
+          onChange={e => { setFilterStatus(e.target.value); setFilterBalance(false); }}
           style={dropdownStyle(!!filterStatus)}
         >
           <option value="">All Status</option>
@@ -493,6 +575,7 @@ export default function MembersView({ user }) {
           </div>
         ))}
       </div>
+      </div>{/* end tableRef wrapper */}
 
       {showAdd && (
         <AddMemberModal

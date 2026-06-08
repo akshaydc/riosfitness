@@ -4,6 +4,62 @@ import { Modal, ModalActions, Btn, Field, Input, Select, Icon, useToast } from '
 import ReceiptView from './ReceiptView';
 
 const SUB_DAYS = { monthly: 30, quarterly: 90, '6_months': 180, yearly: 365 };
+
+const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const currentYear = new Date().getFullYear();
+const YEAR_OPTIONS = Array.from({ length: 6 }, (_, i) => currentYear - 2 + i);
+
+function DatePicker({ value, onChange }) {
+  const parts = value ? value.split('-') : [];
+  const year  = parts[0] || String(currentYear);
+  const month = parts[1] || String(new Date().getMonth() + 1).padStart(2, '0');
+  const day   = parts[2] || '01';
+
+  const daysInMonth = new Date(Number(year), Number(month), 0).getDate();
+
+  function emit(y, m, d) {
+    const clamped = Math.min(Number(d), new Date(Number(y), Number(m), 0).getDate());
+    onChange(`${y}-${String(m).padStart(2, '0')}-${String(clamped).padStart(2, '0')}`);
+  }
+
+  const sel = {
+    padding: '9px 6px',
+    background: 'var(--surface)',
+    border: '1px solid var(--border)',
+    borderRadius: 'var(--radius-sm)',
+    color: 'var(--text)',
+    outline: 'none',
+    cursor: 'pointer',
+    fontSize: '13px',
+    fontFamily: 'inherit',
+    fontWeight: 500,
+    transition: 'border-color 0.15s, box-shadow 0.15s',
+    flexShrink: 0,
+  };
+
+  function focus(e) { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)'; }
+  function blur(e)  { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none'; }
+
+  return (
+    <div style={{ display: 'flex', gap: 6 }}>
+      <select style={{ ...sel, width: 62 }} value={Number(day)} onChange={e => emit(year, month, e.target.value)} onFocus={focus} onBlur={blur}>
+        {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(d => (
+          <option key={d} value={d}>{String(d).padStart(2, '0')}</option>
+        ))}
+      </select>
+      <select style={{ ...sel, width: 72 }} value={String(Number(month))} onChange={e => emit(year, e.target.value, day)} onFocus={focus} onBlur={blur}>
+        {MONTHS_SHORT.map((m, i) => (
+          <option key={m} value={i + 1}>{m}</option>
+        ))}
+      </select>
+      <select style={{ ...sel, width: 82 }} value={year} onChange={e => emit(e.target.value, month, day)} onFocus={focus} onBlur={blur}>
+        {(YEAR_OPTIONS.includes(Number(year)) ? YEAR_OPTIONS : [...YEAR_OPTIONS, Number(year)].sort()).map(y => (
+          <option key={y} value={y}>{y}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
 const DEFAULT_FEES = { monthly: 1000, quarterly: 2700, '6_months': 5000, yearly: 9000 };
 
 const TIMINGS = [
@@ -315,10 +371,10 @@ export default function AddMemberModal({ onClose, onAdded }) {
 
         <div className="form-row-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
           <Field label="Join Date" required>
-            <Input type="date" value={form.join_date} onChange={e => set('join_date', e.target.value)} />
+            <DatePicker value={form.join_date} onChange={v => set('join_date', v)} />
           </Field>
           <Field label="Due Date" required>
-            <Input type="date" value={form.due_date} onChange={e => set('due_date', e.target.value)} />
+            <DatePicker value={form.due_date} onChange={v => set('due_date', v)} />
             <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>Auto-calculated · editable</span>
           </Field>
         </div>
