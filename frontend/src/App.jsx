@@ -6,6 +6,7 @@ import Sidebar from './Sidebar';
 import MembersView from './MembersView';
 import ReportsView from './ReportsView';
 import ReceiptsView from './ReceiptsView';
+import ReceiptPage from './ReceiptPage';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -101,6 +102,9 @@ function App() {
 }
 
 export default function Root() {
+  if (window.location.pathname.startsWith('/receipt/')) {
+    return <ReceiptPage />;
+  }
   return (
     <ToastProvider>
       <App />

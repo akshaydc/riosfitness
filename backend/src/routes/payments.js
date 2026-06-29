@@ -1,6 +1,7 @@
 const express = require('express');
 const pool = require('../db');
 const { authenticate, requireSuperAdmin } = require('../auth');
+const { sendPaymentReceipt } = require('../whatsapp');
 
 const router = express.Router();
 router.use(authenticate);
@@ -70,6 +71,11 @@ router.post('/', async (req, res) => {
     );
 
     await client.query('COMMIT');
+    sendPaymentReceipt(
+      { ...member, due_date: newDue },
+      payment,
+      { id: receiptId, paid_date: today.toISOString().split('T')[0] }
+    ).catch(err => console.error('[WhatsApp]', err));
     res.status(201).json({ payment, new_due_date: newDue, receipt_id: receiptId, recorded_by: recordedBy, balance_pending: newBalance });
   } catch (err) {
     await client.query('ROLLBACK');

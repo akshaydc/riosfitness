@@ -1,6 +1,7 @@
 const express = require('express');
 const pool = require('../db');
 const { authenticate, requireSuperAdmin } = require('../auth');
+const { sendWelcomeMessage } = require('../whatsapp');
 
 const router = express.Router();
 router.use(authenticate);
@@ -255,6 +256,7 @@ router.post('/', async (req, res) => {
          notes || null, photo || null, timing || null, subscription_fee || null, membershipId,
          parseInt(balance_pending) || 0]
       );
+      sendWelcomeMessage(rows[0]).catch(err => console.error('[WhatsApp]', err));
       return res.status(201).json(rows[0]);
     } catch (err) {
       console.error(err);
@@ -316,6 +318,7 @@ router.post('/', async (req, res) => {
     );
 
     await client.query('COMMIT');
+    sendWelcomeMessage(member).catch(err => console.error('[WhatsApp]', err));
     res.status(201).json({
       ...member,
       receipt_id: receiptId,
