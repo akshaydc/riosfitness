@@ -40,6 +40,7 @@ export default function MemberDetailModal({ memberId, user, onClose, onUpdate, o
   const [member, setMember] = useState(null);
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
+  const [deletingMember, setDeletingMember] = useState(false);
   const [editingPaymentId, setEditingPaymentId] = useState(null);
   const [editPaymentForm, setEditPaymentForm] = useState({});
   const [savingPayment, setSavingPayment] = useState(false);
@@ -181,6 +182,20 @@ export default function MemberDetailModal({ memberId, user, onClose, onUpdate, o
       toast(err.message || 'Failed to cancel', 'error');
     } finally {
       setCancelling(false);
+    }
+  }
+
+  async function handleDeleteMember() {
+    if (!confirm(`Permanently delete ${member.name}? This will remove the member along with all their payments and receipts. This cannot be undone.`)) return;
+    setDeletingMember(true);
+    try {
+      await api.deleteMember(memberId);
+      toast(`${member.name} deleted`);
+      onUpdate();
+    } catch (err) {
+      toast(err.message || 'Failed to delete member', 'error');
+    } finally {
+      setDeletingMember(false);
     }
   }
 
@@ -640,6 +655,12 @@ export default function MemberDetailModal({ memberId, user, onClose, onUpdate, o
                 <Btn variant="danger" size="sm" onClick={handleCancel} disabled={cancelling}>
                   <Icon name="ban" />
                   {cancelling ? 'Cancelling…' : 'Cancel Membership'}
+                </Btn>
+              )}
+              {user?.role === 'super_admin' && (
+                <Btn variant="danger" size="sm" onClick={handleDeleteMember} disabled={deletingMember}>
+                  <Icon name="trash" />
+                  {deletingMember ? 'Deleting…' : 'Delete Member'}
                 </Btn>
               )}
               <div style={{ flex: 1 }} />

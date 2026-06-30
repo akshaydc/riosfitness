@@ -149,6 +149,17 @@ router.patch('/:id/photo', async (req, res) => {
   }
 });
 
+router.delete('/:id', requireSuperAdmin, async (req, res) => {
+  try {
+    const { rows } = await pool.query('DELETE FROM members WHERE id = $1 RETURNING id', [req.params.id]);
+    if (!rows[0]) return res.status(404).json({ error: 'Member not found' });
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 router.patch('/:id/cancel', requireSuperAdmin, async (req, res) => {
   try {
     const { rows } = await pool.query(

@@ -48,6 +48,9 @@ export const api = {
   cancelMember: (id) =>
     request(`/api/members/${id}/cancel`, { method: 'PATCH' }),
 
+  deleteMember: (id) =>
+    request(`/api/members/${id}`, { method: 'DELETE' }),
+
   updateMemberPhoto: (id, photo) =>
     request(`/api/members/${id}/photo`, { method: 'PATCH', body: JSON.stringify({ photo }) }),
 
