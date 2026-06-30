@@ -68,6 +68,8 @@ export default function PaymentModal({ member, user, onClose, onPaid }) {
         new_due_date: result.new_due_date,
         note: form.note || null,
         balance_pending: balancePendingAfter,
+        whatsapp_link: result.whatsapp_link,
+        whatsapp_label: 'Send WhatsApp Receipt',
       });
     } catch (err) {
       toast(err.message || 'Payment failed', 'error');

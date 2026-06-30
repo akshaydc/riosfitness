@@ -1,12 +1,36 @@
 const express = require('express');
 const pool = require('../db');
 const { authenticate, requireSuperAdmin } = require('../auth');
-const { sendWelcomeMessage } = require('../whatsapp');
 
 const router = express.Router();
 router.use(authenticate);
 
 const SUB_MAP = { monthly: 30, quarterly: 90, '6_months': 180, yearly: 365, annual: 365 };
+const SUB_LABELS = { monthly: 'Monthly', quarterly: '3 Months', '6_months': '6 Months', yearly: 'Annual', annual: 'Annual' };
+const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function fmtDateMsg(d) {
+  if (!d) return '';
+  const dt = new Date(d);
+  return `${String(dt.getUTCDate()).padStart(2, '0')} ${MONTHS_SHORT[dt.getUTCMonth()]} ${dt.getUTCFullYear()}`;
+}
+
+function toIntlPhone(phone) {
+  const clean = String(phone || '').replace(/\D/g, '');
+  if (!clean) return null;
+  return clean.length === 10 ? `91${clean}` : clean;
+}
+
+function buildWaLink(phone, text) {
+  const intl = toIntlPhone(phone);
+  if (!intl) return null;
+  return `https://wa.me/${intl}?text=${encodeURIComponent(text)}`;
+}
+
+function buildWelcomeMessage(member) {
+  const plan = SUB_LABELS[member.subscription_type] || member.subscription_type || '';
+  return `Hi ${member.name}! 👋 Welcome to Rios Fitness!\n\nYour membership details:\n• Membership ID: ${member.membership_id}\n• Plan: ${plan}\n• Valid Until: ${fmtDateMsg(member.due_date)}\n• Timing: ${member.timing || 'Not set'}\n\nWe're excited to have you with us. See you at the gym! 💪\n\nTeam Rios Fitness`;
+}
 
 function generateMembershipId(joinDate) {
   const d = new Date(joinDate || Date.now());
@@ -267,8 +291,8 @@ router.post('/', async (req, res) => {
          notes || null, photo || null, timing || null, subscription_fee || null, membershipId,
          parseInt(balance_pending) || 0]
       );
-      sendWelcomeMessage(rows[0]).catch(err => console.error('[WhatsApp]', err));
-      return res.status(201).json(rows[0]);
+      const whatsappLink = buildWaLink(rows[0].phone, buildWelcomeMessage(rows[0]));
+      return res.status(201).json({ ...rows[0], whatsapp_link: whatsappLink });
     } catch (err) {
       console.error(err);
       return res.status(500).json({ error: 'Server error' });
@@ -329,12 +353,13 @@ router.post('/', async (req, res) => {
     );
 
     await client.query('COMMIT');
-    sendWelcomeMessage(member).catch(err => console.error('[WhatsApp]', err));
+    const whatsappLink = buildWaLink(member.phone, buildWelcomeMessage({ ...member, due_date: dueDate, membership_id: membershipId }));
     res.status(201).json({
       ...member,
       receipt_id: receiptId,
       recorded_by: recordedBy,
       new_due_date: dueDate,
+      whatsapp_link: whatsappLink,
     });
   } catch (err) {
     await client.query('ROLLBACK');

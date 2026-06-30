@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { fmtDate, fmtCurrency } from './components';
+import { fmtDate, fmtCurrency, Icon } from './components';
 
 const SUB_LABELS = {
   monthly: 'Monthly', quarterly: '3 Months',
@@ -43,13 +43,20 @@ function Row({ label, value, large }) {
   );
 }
 
-export default function ReceiptView({ receipt, onClose, autoPrint = false }) {
+export default function ReceiptView({ receipt, onClose, autoPrint = false, autoWhatsapp = false }) {
   useEffect(() => {
     if (autoPrint) {
       const t = setTimeout(() => window.print(), 350);
       return () => clearTimeout(t);
     }
   }, [autoPrint]);
+
+  useEffect(() => {
+    if (autoWhatsapp && receipt.whatsapp_link) {
+      window.open(receipt.whatsapp_link, '_blank');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const rows = [
     { label: 'Receipt No.', value: receipt.id },
@@ -214,6 +221,32 @@ export default function ReceiptView({ receipt, onClose, autoPrint = false }) {
           <div style={{ textAlign: 'center', fontSize: 11, color: '#adb5bd' }}>
             Select "Save as PDF" in the print dialog to download as PDF
           </div>
+          {receipt.whatsapp_link && (
+            <button
+              onClick={() => window.open(receipt.whatsapp_link, '_blank')}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                width: '100%',
+                padding: '10px 0',
+                background: '#25D366',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: 8,
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+              }}
+            >
+              <Icon name="whatsapp" />
+              {receipt.whatsapp_label || 'Send WhatsApp Message'}
+            </button>
+          )}
+          {autoWhatsapp && receipt.whatsapp_link && (
+            <div style={{ textAlign: 'center', fontSize: 11, color: '#15803d', fontWeight: 600 }}>
+              WhatsApp message opened in a new tab — please click Send
+            </div>
+          )}
         </div>
       </div>
     </div>

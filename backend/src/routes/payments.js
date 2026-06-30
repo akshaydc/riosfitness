@@ -1,10 +1,33 @@
 const express = require('express');
 const pool = require('../db');
 const { authenticate, requireSuperAdmin } = require('../auth');
-const { sendPaymentReceipt } = require('../whatsapp');
 
 const router = express.Router();
 router.use(authenticate);
+
+const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function fmtDateMsg(d) {
+  if (!d) return '';
+  const dt = new Date(d);
+  return `${String(dt.getUTCDate()).padStart(2, '0')} ${MONTHS_SHORT[dt.getUTCMonth()]} ${dt.getUTCFullYear()}`;
+}
+
+function toIntlPhone(phone) {
+  const clean = String(phone || '').replace(/\D/g, '');
+  if (!clean) return null;
+  return clean.length === 10 ? `91${clean}` : clean;
+}
+
+function buildWaLink(phone, text) {
+  const intl = toIntlPhone(phone);
+  if (!intl) return null;
+  return `https://wa.me/${intl}?text=${encodeURIComponent(text)}`;
+}
+
+function buildReceiptMessage({ name, receiptId, amount, method, paidDate, dueDate, receiptUrl }) {
+  return `Hi ${name}, your payment has been recorded! ✅\n\nReceipt Details:\n• Receipt ID: ${receiptId}\n• Amount Paid: ₹${amount}\n• Payment Method: ${method}\n• Date: ${fmtDateMsg(paidDate)}\n• Next Due Date: ${fmtDateMsg(dueDate)}\n\nView your receipt: ${receiptUrl}\n\nThank you! Team Rios Fitness`;
+}
 
 router.post('/', async (req, res) => {
   const { member_id, amount, payment_method, note, balance_pending } = req.body;
@@ -71,12 +94,20 @@ router.post('/', async (req, res) => {
     );
 
     await client.query('COMMIT');
-    sendPaymentReceipt(
-      { ...member, due_date: newDue },
-      payment,
-      { id: receiptId, paid_date: today.toISOString().split('T')[0] }
-    ).catch(err => console.error('[WhatsApp]', err));
-    res.status(201).json({ payment, new_due_date: newDue, receipt_id: receiptId, recorded_by: recordedBy, balance_pending: newBalance });
+    const receiptUrl = `${process.env.FRONTEND_URL || ''}/receipt/${receiptId}`;
+    const whatsappLink = buildWaLink(member.phone, buildReceiptMessage({
+      name: member.name,
+      receiptId,
+      amount,
+      method: payment_method || 'Cash',
+      paidDate: today.toISOString().split('T')[0],
+      dueDate: newDue,
+      receiptUrl,
+    }));
+    res.status(201).json({
+      payment, new_due_date: newDue, receipt_id: receiptId, recorded_by: recordedBy,
+      balance_pending: newBalance, whatsapp_link: whatsappLink,
+    });
   } catch (err) {
     await client.query('ROLLBACK');
     console.error(err);
