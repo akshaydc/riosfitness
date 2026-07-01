@@ -43,20 +43,13 @@ function Row({ label, value, large }) {
   );
 }
 
-export default function ReceiptView({ receipt, onClose, autoPrint = false, autoWhatsapp = false }) {
+export default function ReceiptView({ receipt, onClose, autoPrint = false }) {
   useEffect(() => {
     if (autoPrint) {
       const t = setTimeout(() => window.print(), 350);
       return () => clearTimeout(t);
     }
   }, [autoPrint]);
-
-  useEffect(() => {
-    if (autoWhatsapp && receipt.whatsapp_link) {
-      window.open(receipt.whatsapp_link, '_blank');
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const rows = [
     { label: 'Receipt No.', value: receipt.id },
@@ -241,11 +234,6 @@ export default function ReceiptView({ receipt, onClose, autoPrint = false, autoW
               <Icon name="whatsapp" />
               {receipt.whatsapp_label || 'Send WhatsApp Message'}
             </button>
-          )}
-          {autoWhatsapp && receipt.whatsapp_link && (
-            <div style={{ textAlign: 'center', fontSize: 11, color: '#15803d', fontWeight: 600 }}>
-              WhatsApp message opened in a new tab — please click Send
-            </div>
           )}
         </div>
       </div>

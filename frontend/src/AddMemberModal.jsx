@@ -237,7 +237,7 @@ export default function AddMemberModal({ onClose, onAdded }) {
           note: null,
           balance_pending: parseInt(form.balance_pending) || 0,
           whatsapp_link: result.whatsapp_link,
-          whatsapp_label: 'Resend WhatsApp Message',
+          whatsapp_label: 'Send WhatsApp Welcome',
         });
       } else {
         toast('Member added successfully');
@@ -251,7 +251,7 @@ export default function AddMemberModal({ onClose, onAdded }) {
   }
 
   if (receipt) {
-    return <ReceiptView receipt={receipt} onClose={onClose} autoWhatsapp />;
+    return <ReceiptView receipt={receipt} onClose={onClose} />;
   }
 
   return (
